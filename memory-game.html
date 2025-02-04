@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Memory Game</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
+  <style>
+    /* Global Styles */
+    body {
+      font-family: 'Fredoka One', cursive;
+      background: linear-gradient(135deg, #ffccff, #ccffff);
+      margin: 0;
+      padding: 0;
+      colour: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .screen {
+      display: none;
+      padding: 20px;
+      text-align: center;
+      width: 90%;
+      max-width: 800px;
+      margin: 20px auto;
+      background: #fff;
+      border-radius: 15px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .visible {
+      display: block;
+    }
+    h1, h2 {
+      colour: #ff4081;
+      margin-bottom: 20px;
+    }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 1.1em;
+      cursor: pointer;
+      background: #ff4081;
+      colour: #fff;
+      border: none;
+      border-radius: 10px;
+      transition: transform 0.2s, background 0.3s;
+    }
+    button:hover {
+      background: #e03570;
+      transform: scale(1.05);
+    }
+    #game-board {
+      display: grid;
+      gap: 10px;
+      margin: 20px auto;
+      max-width: 600px;
+    }
+    .card {
+      background-colour: #fff;
+      border: 2px solid #ff4081;
+      border-radius: 12px;
+      perspective: 1000px;
+      cursor: pointer;
+      height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      text-align: center;
+      transition: transform 0.6s;
+      transform-style: preserve-3d;
+    }
+    .card.flipped .card-inner {
+      transform: rotateY(180deg);
+    }
+    .card-front, .card-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2em;
+      border-radius: 12px;
+    }
+    .card-front {
+      background: #ff4081;
+      colour: #fff;
+    }
+    .card-back {
+      background: #fff;
+      colour: #333;
+      transform: rotateY(180deg);
+      border: 2px solid #ff4081;
+    }
+    .matched {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+    #score-board span {
+      margin: 0 10px;
+      font-size: 1.2em;
+    }
+    label {
+      margin-right: 10px;
+      font-size: 1.1em;
+    }
+    /* Additional playful animations */
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-10px); }
+      60% { transform: translateY(-5px); }
+    }
+    .card.flipped .card-inner {
+      animation: bounce 0.6s;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Main Menu Screen -->
+  <div id="main-menu" class="screen visible">
+    <h1>Memory Game</h1>
+    <button id="play-btn">Play</button>
+    <button id="settings-btn">Settings</button>
+    <button id="premium-btn">Premium Content</button>
+    <button id="collection-btn">Collection</button>
+    <button id="stats-btn">Stats</button>
+  </div>
+
+  <!-- Tutorial Screen -->
+  <div id="tutorial-screen" class="screen">
+    <h2>Tutorial</h2>
+    <p>Welcome to the Memory Game! Tap on a card to reveal its image. Try to find its matching pair. If you match the cards successfully they will remain open, otherwise they will flip back. Your performance is tracked by mistakes, combo streaks and speed. Have fun!</p>
+    <button id="start-tutorial">Start Tutorial</button>
+    <button id="skip-tutorial">Skip Tutorial</button>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="game-screen" class="screen">
+    <h2 id="level-title">Level 1</h2>
+    <div id="score-board">
+      <span id="mistakes">Mistakes: 0</span>
+      <span id="combo">Combo: 0</span>
+      <span id="timer">Time: 0</span>
+    </div>
+    <div id="game-board"></div>
+    <button id="next-level-btn" style="display: none;">Next Level</button>
+  </div>
+
+  <!-- Settings Screen -->
+  <div id="settings-screen" class="screen">
+    <h2>Settings</h2>
+    <div>
+      <label for="music-toggle">Music</label>
+      <input type="checkbox" id="music-toggle" checked>
+    </div>
+    <div>
+      <label for="sound-toggle">Sound Effects</label>
+      <input type="checkbox" id="sound-toggle" checked>
+    </div>
+    <div>
+      <label for="haptics-toggle">Haptics</label>
+      <input type="checkbox" id="haptics-toggle" checked>
+    </div>
+    <div>
+      <label for="language-select">Language</label>
+      <select id="language-select">
+        <option value="en">English</option>
+        <option value="tr">Turkish</option>
+        <option value="de">German</option>
+        <option value="es">Spanish</option>
+      </select>
+    </div>
+    <button id="back-from-settings">Back</button>
+  </div>
+
+  <!-- Stats Screen -->
+  <div id="stats-screen" class="screen">
+    <h2>Stats</h2>
+    <p>Successful Matches: <span id="matches-count">0</span></p>
+    <p>Mistakes: <span id="mistakes-count">0</span></p>
+    <p>Success Rate: <span id="success-rate">0%</span></p>
+    <p>Current Streak: <span id="current-streak">0</span></p>
+    <button id="back-from-stats">Back</button>
+  </div>
+
+  <script>
+    /* 
+      JavaScript game logic 
+      This script handles the main menu navigation, tutorial and game play mechanics,
+      including card flipping, match checking, level progression and scoring.
+    */
+    
+    // Global game state variables
+    let currentLevel = 1;
+    let mistakes = 0;
+    let matches = 0;
+    let combo = 0;
+    let timerInterval;
+    let startTime;
+
+    // Define themes with example icons (these can be replaced by images if desired)
+    const themes = {
+      "Funny Animals": ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼'],
+      "Planets": ['🌍','🌕','☄️','🪐','⭐','🌟','🌠','🔥'],
+      "Dinosaurs": ['🦕','🦖','🦕','🦖','🦕','🦖','🦕','🦖']
+    };
+    let currentTheme = "Funny Animals";
+
+    // Utility function to shuffle an array (Fisher–Yates shuffle)
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    // Function to show a given screen and hide others
+    function showScreen(screenId) {
+      const screens = document.querySelectorAll('.screen');
+      screens.forEach(screen => {
+        if (screen.id === screenId) {
+          screen.classList.add('visible');
+        } else {
+          screen.classList.remove('visible');
+        }
+      });
+    }
+
+    // Main Menu button event listeners
+    document.getElementById('play-btn').addEventListener('click', () => {
+      // Reset level and game state; start with tutorial for level 1
+      currentLevel = 1;
+      mistakes = 0;
+      matches = 0;
+      combo = 0;
+      document.getElementById('level-title').textContent = "Level " + currentLevel;
+      showScreen('tutorial-screen');
+    });
+
+    document.getElementById('settings-btn').addEventListener('click', () => {
+      showScreen('settings-screen');
+    });
+
+    document.getElementById('stats-btn').addEventListener('click', () => {
+      updateStatsScreen();
+      showScreen('stats-screen');
+    });
+
+    document.getElementById('premium-btn').addEventListener('click', () => {
+      alert('Premium Content Coming Soon!');
+    });
+
+    document.getElementById('collection-btn').addEventListener('click', () => {
+      alert('Collection Feature Coming Soon!');
+    });
+
+    // Tutorial screen event listeners
+    document.getElementById('start-tutorial').addEventListener('click', () => {
+      startGame(true);
+    });
+
+    document.getElementById('skip-tutorial').addEventListener('click', () => {
+      startGame(false);
+    });
+
+    // Settings screen back button
+    document.getElementById('back-from-settings').addEventListener('click', () => {
+      showScreen('main-menu');
+    });
+
+    // Stats screen back button
+    document.getElementById('back-from-stats').addEventListener('click', () => {
+      showScreen('main-menu');
+    });
+
+    // Game screen – next level button
+    document.getElementById('next-level-btn').addEventListener('click', () => {
+      currentLevel++;
+      document.getElementById('level-title').textContent = "Level " + currentLevel;
+      document.getElementById('next-level-btn').style.display = 'none';
+      startGame(false);
+    });
+
+    // Game play variables
+    let flippedCards = [];
+    let cardValues = [];
+    let boardLocked = false;
+
+    // Function to start (or restart) a game level
+    function startGame(isTutorial) {
+      showScreen('game-screen');
+      // Determine number of cards based on level progression.
+      // For Level 1 (tutorial), we use 8 cards (2 x 4 grid).
+      let numCards;
+      if (currentLevel === 1) {
+        numCards = 8;
+      } else {
+        // Increase the number of cards with each level (up to 28 cards).
+        numCards = Math.min(8 + (currentLevel - 1) * 2, 28);
+        if (numCards % 2 !== 0) numCards++; // Ensure an even number of cards
+      }
+      
+      // Prepare deck: choose needed pairs from the current theme.
+      const themeIcons = themes[currentTheme];
+      const neededPairs = numCards / 2;
+      let pairs = [];
+      for (let i = 0; i < neededPairs; i++) {
+        pairs.push(themeIcons[i % themeIcons.length]);
+      }
+      // Duplicate the pairs and shuffle the full deck.
+      cardValues = shuffle([...pairs, ...pairs]);
+
+      // Build the game board.
+      const board = document.getElementById('game-board');
+      board.innerHTML = '';
+
+      // Calculate grid dimensions – using a simple heuristic.
+      const columns = Math.floor(Math.sqrt(numCards));
+      const rows = Math.ceil(numCards / columns);
+      board.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+
+      cardValues.forEach((value, index) => {
+        const card = document.createElement('div');
+        card.classList.add('card');
+        card.dataset.value = value;
+        card.dataset.index = index;
+        card.innerHTML = `
+          <div class="card-inner">
+            <div class="card-front">?</div>
+            <div class="card-back">${value}</div>
+          </div>
+        `;
+        card.addEventListener('click', handleCardClick);
+        board.appendChild(card);
+      });
+
+      // Reset level variables and interface elements.
+      flippedCards = [];
+      boardLocked = false;
+      mistakes = 0;
+      matches = 0;
+      combo = 0;
+      updateScoreBoard();
+      startTimer();
+    }
+
+    // Handle card click events.
+    function handleCardClick(event) {
+      if (boardLocked) return;
+      const card = event.currentTarget;
+      if (card.classList.contains('flipped')) return;
+      
+      flipCard(card);
+      flippedCards.push(card);
+      
+      if (flippedCards.length === 2) {
+        boardLocked = true;
+        checkForMatch();
+      }
+    }
+
+    // Flip a card by adding the 'flipped' class.
+    function flipCard(card) {
+      card.classList.add('flipped');
+      // Optional: provide haptic feedback if enabled.
+      if (navigator.vibrate && document.getElementById('haptics-toggle').checked) {
+        navigator.vibrate(50);
+      }
+    }
+
+    // Unflip a card.
+    function unflipCard(card) {
+      card.classList.remove('flipped');
+    }
+
+    // Check if the two flipped cards are a match.
+    function checkForMatch() {
+      const [card1, card2] = flippedCards;
+      if (card1.dataset.value === card2.dataset.value) {
+        // Successful match.
+        matches++;
+        combo++;
+        card1.classList.add('matched');
+        card2.classList.add('matched');
+        card1.removeEventListener('click', handleCardClick);
+        card2.removeEventListener('click', handleCardClick);
+        if (navigator.vibrate && document.getElementById('haptics-toggle').checked) {
+          navigator.vibrate([20, 50, 20]);
+        }
+        flippedCards = [];
+        boardLocked = false;
+        updateScoreBoard();
+        checkWinCondition();
+      } else {
+        // Mismatch: record a mistake and reset the combo.
+        mistakes++;
+        combo = 0;
+        updateScoreBoard();
+        if (navigator.vibrate && document.getElementById('haptics-toggle').checked) {
+          navigator.vibrate(100);
+        }
+        setTimeout(() => {
+          unflipCard(card1);
+          unflipCard(card2);
+          flippedCards = [];
+          boardLocked = false;
+        }, 1000);
+      }
+    }
+
+    // Check if the win condition (all pairs matched) has been met.
+    function checkWinCondition() {
+      const totalPairs = cardValues.length / 2;
+      if (matches === totalPairs) {
+        clearInterval(timerInterval);
+        setTimeout(() => {
+          alert('Congratulations! You have completed the level.');
+          document.getElementById('next-level-btn').style.display = 'inline-block';
+        }, 500);
+      }
+    }
+
+    // Update the score board display.
+    function updateScoreBoard() {
+      document.getElementById('mistakes').textContent = 'Mistakes: ' + mistakes;
+      document.getElementById('combo').textContent = 'Combo: ' + combo;
+    }
+
+    // Start or restart the level timer.
+    function startTimer() {
+      startTime = Date.now();
+      document.getElementById('timer').textContent = 'Time: 0';
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        document.getElementById('timer').textContent = 'Time: ' + elapsed;
+      }, 1000);
+    }
+
+    // Update the stats screen with current performance data.
+    function updateStatsScreen() {
+      document.getElementById('matches-count').textContent = matches;
+      document.getElementById('mistakes-count').textContent = mistakes;
+      let totalAttempts = matches + mistakes;
+      let successRate = totalAttempts ? (matches / totalAttempts) * 100 : 0;
+      document.getElementById('success-rate').textContent = Math.round(successRate) + '%';
+      document.getElementById('current-streak').textContent = combo;
+    }
+  </script>
+</body>
+</html>
