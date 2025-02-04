@@ -11,7 +11,7 @@
       background: linear-gradient(135deg, #ffccff, #ccffff);
       margin: 0;
       padding: 0;
-      colour: #333;
+      color: #333;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -32,7 +32,7 @@
       display: block;
     }
     h1, h2 {
-      colour: #ff4081;
+      color: #ff4081;
       margin-bottom: 20px;
     }
     button {
@@ -41,7 +41,7 @@
       font-size: 1.1em;
       cursor: pointer;
       background: #ff4081;
-      colour: #fff;
+      color: #fff;
       border: none;
       border-radius: 10px;
       transition: transform 0.2s, background 0.3s;
@@ -57,7 +57,7 @@
       max-width: 600px;
     }
     .card {
-      background-colour: #fff;
+      background-color: #fff;
       border: 2px solid #ff4081;
       border-radius: 12px;
       perspective: 1000px;
@@ -67,17 +67,35 @@
       align-items: center;
       justify-content: center;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: transform 0.2s ease;
+    }
+    .card:active {
+      transform: scale(0.98);
     }
     .card-inner {
       position: relative;
       width: 100%;
       height: 100%;
       text-align: center;
-      transition: transform 0.6s;
-      transform-style: preserve-3d;
+      /* Remove the standard transition as we use a custom flip animation */
     }
+    /* When a card is flipped, play a custom flipBounce animation */
     .card.flipped .card-inner {
-      transform: rotateY(180deg);
+      animation: flipBounce 0.8s forwards;
+    }
+    @keyframes flipBounce {
+      0% {
+        transform: rotateY(0deg) scale(1);
+      }
+      40% {
+        transform: rotateY(90deg) scale(1.2);
+      }
+      60% {
+        transform: rotateY(110deg) scale(1.2);
+      }
+      100% {
+        transform: rotateY(180deg) scale(1);
+      }
     }
     .card-front, .card-back {
       position: absolute;
@@ -87,18 +105,19 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 2em;
       border-radius: 12px;
     }
     .card-front {
       background: #ff4081;
-      colour: #fff;
+      color: #fff;
+      font-size: 2em;
     }
     .card-back {
       background: #fff;
-      colour: #333;
+      color: #333;
       transform: rotateY(180deg);
       border: 2px solid #ff4081;
+      font-size: 3em; /* Larger animal icons */
     }
     .matched {
       opacity: 0.6;
@@ -111,15 +130,6 @@
     label {
       margin-right: 10px;
       font-size: 1.1em;
-    }
-    /* Additional playful animations */
-    @keyframes bounce {
-      0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-      40% { transform: translateY(-10px); }
-      60% { transform: translateY(-5px); }
-    }
-    .card.flipped .card-inner {
-      animation: bounce 0.6s;
     }
   </style>
 </head>
@@ -193,10 +203,10 @@
   </div>
 
   <script>
-    /* 
-      JavaScript game logic 
-      This script handles the main menu navigation, tutorial and game play mechanics,
-      including card flipping, match checking, level progression and scoring.
+    /*
+      JavaScript game logic
+      Handles the main menu navigation, tutorial and game play mechanics,
+      including card flipping with improved animations, match checking, level progression and scoring.
     */
     
     // Global game state variables
