@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Monster Café</title>
+<style>
+/* ─── BASE RESET ─── */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+
+/* ─── BODY ─── */
+body{
+  font-family:system-ui,-apple-system,"Comic Sans MS",sans-serif;
+  background:linear-gradient(180deg,#87CEEB 0%,#C9EEFF 55%,#6B4F0A 55%,#8B6914 56%,#5A3E08 100%);
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  overflow:hidden;
+  user-select:none;
+}
+
+/* ─── GAME CONTAINER ─── */
+#game{
+  width:100%;
+  max-width:520px;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  position:relative;
+}
+
+/* ─── TOP BAR ─── */
+#topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:linear-gradient(135deg,#FF6B35,#FF3366);
+  color:white;
+  padding:10px 16px;
+  border-radius:0 0 20px 20px;
+  font-size:1.2rem;
+  font-weight:900;
+  flex-shrink:0;
+  box-shadow:0 4px 12px rgba(0,0,0,0.3);
+  z-index:10;
+}
+#topbar .title{font-size:1.1rem;letter-spacing:1px;}
+#settings-btn{background:none;border:none;color:white;font-size:1.4rem;cursor:pointer;padding:4px;}
+#level-badge{background:rgba(255,255,255,0.25);border-radius:10px;padding:2px 8px;font-size:0.8rem;font-weight:bold;}
+
+/* ─── MONSTER AREA ─── */
+#monster-area{
+  flex:2;
+  min-height:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:8px 12px 4px;
+  overflow:hidden;
+}
+.monster-wrapper{flex-shrink:0;}
+.monster-wrapper svg{max-width:min(130px,36vw);height:auto;display:block;}
+
+/* ─── SPEECH BUBBLE ─── */
+.speech-bubble{
+  background:white;
+  border:3px solid #333;
+  border-radius:18px;
+  padding:10px 13px;
+  position:relative;
+  max-width:min(220px,56vw);
+  font-size:clamp(0.75rem,2.5vw,0.9rem);
+  box-shadow:2px 3px 0 rgba(0,0,0,0.15);
+  flex-shrink:1;
+  min-width:0;
+}
+/* Default tail: points left (monster on left of bubble) */
+.speech-bubble::before{content:'';position:absolute;left:-16px;top:18px;border:8px solid transparent;border-right-color:#333;}
+.speech-bubble::after {content:'';position:absolute;left:-10px;top:21px;border:5px solid transparent;border-right-color:white;}
+
+.order-item{display:flex;align-items:center;gap:4px;margin-top:4px;font-size:clamp(0.7rem,2.2vw,0.85rem);line-height:1.3;}
+.dots{color:#FF6B35;letter-spacing:2px;font-size:0.65rem;}
+.order-food{font-weight:900;font-size:clamp(0.8rem,2.5vw,1rem);margin-bottom:3px;}
+.speech-bubble.disgust-bubble{border-color:#FF3366;background:#FFF0F3;}
+.order-item.error-item{color:#CC0000;font-weight:bold;}
+
+/* ─── PREP AREA ─── */
+#prep-area{
+  flex:2.5;
+  min-height:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(255,255,255,0.35);
+  border-radius:20px;
+  margin:4px 10px;
+  box-shadow:inset 0 2px 8px rgba(0,0,0,0.1);
+  overflow:hidden;
+}
+#prep-area svg{max-width:min(240px,70vw);max-height:min(240px,26vh);width:100%;height:auto;}
+
+/* ─── TOPPING BINS ─── */
+#bins{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:8px;
+  padding:6px 8px;
+  background:rgba(255,255,255,0.4);
+  border-radius:16px;
+  margin:0 10px;
+  flex-shrink:0;
+}
+.bin{
+  width:clamp(60px,16vw,72px);
+  height:clamp(60px,16vw,72px);
+  background:white;
+  border-radius:14px;
+  border:3px solid #444;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  cursor:pointer;
+  position:relative;
+  box-shadow:0 4px 0 #AAA;
+  transition:transform 0.1s,box-shadow 0.1s;
+  touch-action:manipulation;
+}
+.bin:active{transform:translateY(3px);box-shadow:0 1px 0 #AAA;}
+.bin-emoji{font-size:clamp(1.4rem,5vw,1.8rem);line-height:1;}
+.bin-label{font-size:clamp(0.5rem,1.8vw,0.62rem);font-weight:bold;color:#444;margin-top:1px;}
+.bin-count{
+  position:absolute;top:-8px;right:-8px;
+  background:#FF3366;color:white;border-radius:50%;
+  width:22px;height:22px;font-size:0.75rem;font-weight:900;
+  display:flex;align-items:center;justify-content:center;
+  border:2px solid white;pointer-events:none;
+}
+.bin-minus{
+  position:absolute;bottom:-8px;right:-8px;
+  background:#FF6B35;color:white;border-radius:50%;
+  width:22px;height:22px;font-size:1.1rem;font-weight:900;
+  display:flex;align-items:center;justify-content:center;
+  border:2px solid white;cursor:pointer;line-height:1;padding-bottom:1px;
+  box-shadow:0 2px 4px rgba(0,0,0,0.2);
+}
+.bin-active{background:#FFF9C4;border-color:#FF6B35;}
+
+/* ─── SERVE BUTTON ─── */
+#serve-btn{
+  background:linear-gradient(135deg,#FF3366,#FF1744);
+  color:white;border:none;
+  border-radius:24px;
+  font-size:clamp(1.4rem,5vw,1.8rem);
+  font-weight:900;
+  padding:clamp(12px,3vw,16px);
+  margin:6px 10px 10px;
+  cursor:pointer;
+  border:4px solid rgba(0,0,0,0.25);
+  font-family:inherit;
+  letter-spacing:1px;
+  box-shadow:0 6px 0 #990022,0 8px 16px rgba(0,0,0,0.3);
+  transform:translateY(0);
+  transition:transform 0.1s,box-shadow 0.1s;
+  flex-shrink:0;
+  touch-action:manipulation;
+}
+#serve-btn:active{transform:translateY(5px);box-shadow:0 1px 0 #990022,0 3px 8px rgba(0,0,0,0.2);}
+
+/* ─── SLICE POPUP ─── */
+#slice-popup{
+  position:fixed;bottom:170px;left:50%;transform:translateX(-50%);
+  background:white;border-radius:18px;border:3px solid #333;
+  padding:12px 14px;display:flex;gap:10px;align-items:center;
+  z-index:50;box-shadow:0 6px 24px rgba(0,0,0,0.25);
+}
+.slice-btn{
+  width:50px;height:50px;border-radius:12px;border:2.5px solid #333;
+  font-size:1.3rem;font-weight:900;cursor:pointer;font-family:inherit;
+  background:#FFF9C4;transition:transform 0.1s,background 0.1s;
+}
+.slice-btn:active,.slice-btn.selected{background:#FFD700;transform:scale(0.95);}
+
+/* ─── MODALS ─── */
+.modal-overlay{
+  display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,0.55);z-index:100;
+  align-items:center;justify-content:center;
+}
+.modal-box{
+  background:white;border-radius:24px;padding:28px 24px;
+  text-align:center;max-width:320px;width:90%;
+  box-shadow:0 12px 40px rgba(0,0,0,0.3);
+}
+.modal-box h2{font-size:1.6rem;margin-bottom:16px;color:#333;}
+.modal-btn{
+  background:#FF6B35;color:white;border:none;
+  border-radius:14px;padding:12px 28px;font-size:1.1rem;
+  cursor:pointer;font-family:inherit;font-weight:bold;margin:6px;
+  box-shadow:0 4px 0 #CC3300;
+}
+.modal-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #CC3300;}
+.modal-btn.red{background:#FF3366;box-shadow:0 4px 0 #990022;}
+.modal-btn.red:active{box-shadow:0 1px 0 #990022;}
+
+/* ─── CELEBRATION ─── */
+#celebration{
+  display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+  background:linear-gradient(135deg,#FFD700,#FF6B35);z-index:200;
+  flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:20px;
+}
+#celebration h1{font-size:clamp(1.8rem,6vw,2.5rem);color:white;text-shadow:2px 2px 0 rgba(0,0,0,0.2);margin-bottom:8px;}
+#celeb-stars{font-size:clamp(2rem,8vw,3rem);margin:12px 0;}
+#celeb-level{font-size:clamp(1rem,3.5vw,1.3rem);color:rgba(255,255,255,0.9);margin-bottom:24px;}
+
+/* ─── ANIMATIONS ─── */
+@keyframes monsterBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes monsterChomp{0%,100%{transform:scaleY(1)}40%{transform:scaleY(0.92)}70%{transform:scaleY(1.04)}}
+@keyframes monsterShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+@keyframes popIn{0%{transform:scale(0.5);opacity:0}80%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+@keyframes starSpin{0%{transform:rotate(0) scale(0)}100%{transform:rotate(720deg) scale(1)}}
+.monster-bounce{animation:monsterBounce 1.3s ease-in-out infinite;}
+.monster-happy{animation:monsterChomp 0.45s ease-in-out infinite;}
+.monster-disgusted{animation:monsterShake 0.35s ease-in-out infinite;}
+.pop-in{animation:popIn 0.3s ease-out;}
+.star-burst{position:fixed;font-size:2.5rem;pointer-events:none;animation:starSpin 0.7s ease-out forwards;z-index:300;}
+.cloud{position:fixed;background:white;border-radius:50px;opacity:0.7;pointer-events:none;}
+
+/* ════════════════════════════════════════════════
+   TABLET  ≥ 660px  (portrait tablet, landscape phone)
+   Wider stacked layout — bigger elements, more breathing room
+   ════════════════════════════════════════════════ */
+@media (min-width:660px) and (max-width:899px){
+  body{align-items:center;}
+  #game{
+    max-width:560px;
+    height:min(100vh, 820px);
+    border-radius:24px;
+    overflow:hidden;
+    box-shadow:0 0 0 4px rgba(255,255,255,0.2), 0 24px 60px rgba(0,0,0,0.4);
+  }
+  #topbar{border-radius:0;padding:13px 22px;font-size:1.25rem;}
+  .monster-wrapper svg{max-width:155px;}
+  .speech-bubble{max-width:min(260px,50vw);font-size:0.95rem;padding:12px 15px;}
+  .order-item{font-size:0.9rem;}
+  #prep-area svg{max-width:280px;max-height:280px;}
+  .bin{width:78px;height:78px;}
+  .bin-emoji{font-size:1.9rem;}
+  .bin-label{font-size:0.65rem;}
+  #serve-btn{font-size:1.9rem;padding:16px;}
+}
+
+/* ════════════════════════════════════════════════
+   DESKTOP  ≥ 900px  — 2-column layout
+   Monster scene on left, prep station on right
+   ════════════════════════════════════════════════ */
+@media (min-width:900px){
+  body{
+    /* Warm café-counter background */
+    background:
+      repeating-linear-gradient(90deg,rgba(0,0,0,0.03) 0,rgba(0,0,0,0.03) 1px,transparent 1px,transparent 60px),
+      repeating-linear-gradient(0deg,rgba(0,0,0,0.03) 0,rgba(0,0,0,0.03) 1px,transparent 1px,transparent 60px),
+      linear-gradient(160deg,#D4956A 0%,#C4804A 40%,#A05A2C 100%);
+    align-items:center;
+    overflow:auto;
+    padding:20px;
+  }
+
+  /* Game panel: 2-column CSS grid */
+  #game{
+    max-width:960px;
+    width:100%;
+    height:auto;
+    min-height:min(100vh - 40px, 640px);
+    max-height:calc(100vh - 40px);
+    border-radius:28px;
+    overflow:hidden;
+    box-shadow:0 0 0 5px rgba(255,255,255,0.18), 0 28px 70px rgba(0,0,0,0.45);
+
+    display:grid;
+    grid-template-columns:42% 58%;
+    grid-template-rows:auto 1fr auto auto;
+    grid-template-areas:
+      "topbar  topbar"
+      "monster prep"
+      "monster bins"
+      "monster serve";
+  }
+
+  /* Top bar spans full width */
+  #topbar{
+    grid-area:topbar;
+    border-radius:0;
+    padding:14px 28px;
+    font-size:1.35rem;
+  }
+
+  /* Left column: monster scene */
+  #monster-area{
+    grid-area:monster;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    gap:14px;
+    padding:28px 20px;
+    /* Sky gradient background for monster's world */
+    background:linear-gradient(180deg,#87CEEB 0%,#C9EEFF 60%,rgba(107,79,10,0.15) 100%);
+    border-right:3px solid rgba(255,255,255,0.3);
+    overflow:visible;
+  }
+
+  /* Bigger monster on desktop */
+  .monster-wrapper svg{max-width:200px;}
+
+  /* Bubble tail points upward (monster is above bubble) */
+  .speech-bubble{
+    max-width:260px;
+    font-size:0.98rem;
+    padding:13px 16px;
+  }
+  .speech-bubble::before{
+    left:50%;top:-17px;
+    transform:translateX(-50%);
+    border-right-color:transparent;
+    border-bottom-color:#333;
+  }
+  .speech-bubble::after{
+    left:50%;top:-10px;
+    transform:translateX(-50%);
+    border-right-color:transparent;
+    border-bottom-color:white;
+  }
+  .order-item{font-size:0.95rem;}
+
+  /* Right column: prep area */
+  #prep-area{
+    grid-area:prep;
+    margin:16px 16px 8px;
+    border-radius:18px;
+    flex:none;
+  }
+  #prep-area svg{max-width:320px;max-height:320px;}
+
+  /* Right column: bins */
+  #bins{
+    grid-area:bins;
+    margin:0 16px;
+    padding:8px 10px;
+    gap:10px;
+  }
+  .bin{width:84px;height:84px;}
+  .bin-emoji{font-size:2.1rem;}
+  .bin-label{font-size:0.68rem;}
+  .bin-count,.bin-minus{width:24px;height:24px;font-size:0.8rem;}
+
+  /* Right column: serve button */
+  #serve-btn{
+    grid-area:serve;
+    margin:8px 16px 16px;
+    font-size:1.9rem;
+    padding:18px 24px;
+  }
+
+  /* Slice popup — position relative to game panel not viewport */
+  #slice-popup{bottom:auto;top:50%;transform:translate(-50%,-50%);left:75%;}
+}
+
+/* ════════════════════════════════════════════════
+   LARGE DESKTOP  ≥ 1200px  — scale up further
+   ════════════════════════════════════════════════ */
+@media (min-width:1200px){
+  #game{max-width:1060px;}
+  .monster-wrapper svg{max-width:230px;}
+  #prep-area svg{max-width:370px;max-height:370px;}
+  .bin{width:92px;height:92px;}
+  .bin-emoji{font-size:2.3rem;}
+  .speech-bubble{max-width:290px;font-size:1.05rem;}
+  #serve-btn{font-size:2.1rem;padding:20px 28px;}
+}
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="topbar">
+    <div>⭐ <span id="star-count">0</span></div>
+    <div class="title">Monster Café</div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span id="level-badge">Lv.1</span>
+      <button id="settings-btn">⚙️</button>
+    </div>
+  </div>
+  <div id="monster-area"></div>
+  <div id="prep-area"></div>
+  <div id="bins"></div>
+  <button id="serve-btn" onclick="serveOrder()">🍽️ SERVE!</button>
+</div>
+
+<!-- Settings Modal -->
+<div id="settings-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h2>⚙️ Settings</h2>
+    <div style="margin-bottom:14px;">
+      <button class="modal-btn" id="sound-btn" onclick="toggleSound()">🔊 Sound: ON</button>
+    </div>
+    <div style="font-size:1rem;color:#666;margin-bottom:6px;">Level: <span id="level-display">1</span> of 6</div>
+    <div style="font-size:0.85rem;color:#aaa;margin-bottom:16px;">Stars earned: <span id="stars-display">0</span></div>
+    <button class="modal-btn red" onclick="closeSettings()">Close</button>
+  </div>
+</div>
+
+<!-- Celebration Screen -->
+<div id="celebration">
+  <h1 id="celeb-text">You served 5 monsters!</h1>
+  <div id="celeb-stars">⭐⭐⭐⭐⭐</div>
+  <div id="celeb-level">Level 2 unlocked! 🎉</div>
+  <button class="modal-btn" style="font-size:1.5rem;padding:16px 36px;margin-top:8px;" onclick="continuePlaying()">Keep going! →</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  GAME DATA
+// ═══════════════════════════════════════════════════════════
+
+const TOPPINGS = {
+  mushroom:   { emoji:'🍄', name:'mushroom'  },
+  pepper:     { emoji:'🫑', name:'pepper'    },
+  olive:      { emoji:'🫒', name:'olive'     },
+  pepperoni:  { emoji:'🍕', name:'pepperoni' },
+  cherry:     { emoji:'🍒', name:'cherry'    },
+  sprinkles:  { emoji:'✨', name:'sprinkles' },
+  candle:     { emoji:'🕯️', name:'candle'    },
+  chocchip:   { emoji:'🍫', name:'choc chip' },
+  strawberry: { emoji:'🍓', name:'strawberry'},
+  banana:     { emoji:'🍌', name:'banana'    },
+};
+
+const FOODS = {
+  pizza:   { name:'Pizza',   emoji:'🍕', toppings:['mushroom','pepper','olive','pepperoni'], sliceable:true  },
+  cupcake: { name:'Cupcake', emoji:'🧁', toppings:['cherry','sprinkles','candle','chocchip'], sliceable:false },
+  cake:    { name:'Cake',    emoji:'🎂', toppings:['cherry','candle','strawberry','chocchip'], sliceable:true  },
+  sundae:  { name:'Sundae',  emoji:'🍨', toppings:['cherry','sprinkles','banana','chocchip'],  sliceable:false },
+};
+
+const MONSTERS = [
+  { name:'Blob',     color:'#9B59B6', dark:'#6C3483', type:'blob'      },
+  { name:'Fluffy',   color:'#FF69B4', dark:'#C0396D', type:'fluffy'    },
+  { name:'Spike',    color:'#2ECC71', dark:'#1A8A4A', type:'spike'     },
+  { name:'Tentacle', color:'#3498DB', dark:'#1A5B8E', type:'tentacle'  },
+  { name:'Snaggle',  color:'#E67E22', dark:'#9D5313', type:'snaggle'   },
+];
+
+// ═══════════════════════════════════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════════════════════════════════
+
+let G = {
+  level: 1,
+  stars: 0,
+  soundOn: true,
+  correctAtLevel: 0,
+  monsterIdx: 0,
+  order: null,
+  plate: { food:null, slices:0, toppings:{}, positions:[] },
+  phase: 'playing', // 'playing' | 'correct' | 'wrong' | 'celebrating'
+  wrongErrors: [],
+};
+
+function loadSave() {
+  try {
+    const s = JSON.parse(localStorage.getItem('mc_save') || '{}');
+    G.level   = Math.max(1, Math.min(6, s.level || 1));
+    G.stars   = s.stars || 0;
+    G.soundOn = s.soundOn !== undefined ? s.soundOn : true;
+  } catch(e){}
+}
+function save() {
+  localStorage.setItem('mc_save', JSON.stringify({ level:G.level, stars:G.stars, soundOn:G.soundOn }));
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ORDER GENERATION
+// ═══════════════════════════════════════════════════════════
+
+function rnd(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+function generateOrder(level) {
+  const needsSlice = level >= 3;
+  const foodPool = needsSlice
+    ? Object.keys(FOODS).filter(k=>FOODS[k].sliceable)
+    : Object.keys(FOODS);
+  const foodKey = pick(foodPool);
+  const food = FOODS[foodKey];
+  const order = { food:foodKey, slices:0, toppings:[] };
+
+  if (level === 1) {
+    order.toppings.push({ type:pick(food.toppings), count:rnd(1,3), perSlice:false });
+
+  } else if (level === 2) {
+    const ts = [...food.toppings].sort(()=>Math.random()-0.5);
+    order.toppings.push({ type:ts[0], count:rnd(1,5), perSlice:false });
+    order.toppings.push({ type:ts[1], count:rnd(1,4), perSlice:false });
+
+  } else if (level === 3) {
+    order.slices = pick([2,4]);
+    if (Math.random() < 0.4) {
+      order.toppings.push({ type:pick(food.toppings), count:rnd(1,3), perSlice:false });
+    }
+
+  } else if (level === 4) {
+    order.slices = pick([2,4]);
+    order.toppings.push({ type:pick(food.toppings), count:rnd(2,6), perSlice:false });
+
+  } else if (level === 5) {
+    order.slices = pick([2,4]);
+    order.toppings.push({ type:pick(food.toppings), count:rnd(1,3), perSlice:true });
+
+  } else { // 6
+    order.slices = pick([2,4,6]);
+    const ts2 = [...food.toppings].sort(()=>Math.random()-0.5);
+    order.toppings.push({ type:ts2[0], count:rnd(1,2), perSlice:true  });
+    order.toppings.push({ type:ts2[1], count:rnd(2,4), perSlice:false });
+  }
+  return order;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MONSTER SVG
+// ═══════════════════════════════════════════════════════════
+
+function animClass(expr) {
+  if (expr==='idle')      return 'monster-bounce';
+  if (expr==='happy')     return 'monster-happy';
+  if (expr==='disgusted') return 'monster-disgusted';
+  return '';
+}
+
+function eye(expr, cx, cy, r=12) {
+  if (expr==='disgusted') {
+    const d=r*0.6;
+    return `<line x1="${cx-d}" y1="${cy-d}" x2="${cx+d}" y2="${cy+d}" stroke="#222" stroke-width="3.5" stroke-linecap="round"/>
+            <line x1="${cx+d}" y1="${cy-d}" x2="${cx-d}" y2="${cy+d}" stroke="#222" stroke-width="3.5" stroke-linecap="round"/>`;
+  }
+  if (expr==='happy') {
+    return `<path d="M${cx-r} ${cy} Q${cx} ${cy-r*1.5} ${cx+r} ${cy}" fill="none" stroke="#222" stroke-width="3" stroke-linecap="round"/>`;
+  }
+  return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="white" stroke="#222" stroke-width="2"/>
+          <circle cx="${cx+r*0.2}" cy="${cy-r*0.2}" r="${r*0.55}" fill="#222"/>
+          <circle cx="${cx+r*0.55}" cy="${cy-r*0.5}" r="${r*0.18}" fill="white"/>`;
+}
+
+function mouth(expr, cx, cy, w=16) {
+  if (expr==='disgusted') {
+    return `<path d="M${cx-w} ${cy+6} Q${cx} ${cy-4} ${cx+w} ${cy+6}" fill="none" stroke="#222" stroke-width="3" stroke-linecap="round"/>
+            <ellipse cx="${cx}" cy="${cy+16}" rx="${w*0.7}" ry="${w*0.55}" fill="#FF6B6B"/>
+            <ellipse cx="${cx}" cy="${cy+20}" rx="${w*0.55}" ry="${w*0.4}" fill="#FFB3B3"/>`;
+  }
+  if (expr==='happy') {
+    return `<path d="M${cx-w} ${cy} Q${cx} ${cy+w*1.2} ${cx+w} ${cy}" fill="#FF6B6B" stroke="#222" stroke-width="2.5"/>`;
+  }
+  return `<path d="M${cx-w*0.7} ${cy} Q${cx} ${cy+w*0.8} ${cx+w*0.7} ${cy}" fill="#FF6B6B" stroke="#222" stroke-width="2.5"/>`;
+}
+
+function blobSVG(c,d,expr) {
+  const ac=animClass(expr);
+  return `<svg class="${ac}" width="130" height="155" viewBox="0 0 130 155">
+    <ellipse cx="65" cy="90" rx="56" ry="60" fill="${c}" stroke="#222" stroke-width="3"/>
+    <ellipse cx="16" cy="98" rx="13" ry="9" fill="${c}" stroke="#222" stroke-width="2" transform="rotate(-20,16,98)"/>
+    <ellipse cx="114" cy="98" rx="13" ry="9" fill="${c}" stroke="#222" stroke-width="2" transform="rotate(20,114,98)"/>
+    ${eye(expr,65,60,14)}
+    ${mouth(expr,65,90,15)}
+  </svg>`;
+}
+
+function fluffySVG(c,d,expr) {
+  const ac=animClass(expr);
+  return `<svg class="${ac}" width="130" height="165" viewBox="0 0 130 165">
+    <ellipse cx="65" cy="100" rx="52" ry="55" fill="${c}" stroke="#222" stroke-width="3"/>
+    <circle cx="26" cy="72" r="14" fill="${c}" stroke="#222" stroke-width="2"/>
+    <circle cx="104" cy="72" r="14" fill="${c}" stroke="#222" stroke-width="2"/>
+    <circle cx="16" cy="96" r="12" fill="${c}" stroke="#222" stroke-width="2"/>
+    <circle cx="114" cy="96" r="12" fill="${c}" stroke="#222" stroke-width="2"/>
+    <circle cx="30" cy="122" r="12" fill="${c}" stroke="#222" stroke-width="2"/>
+    <circle cx="100" cy="122" r="12" fill="${c}" stroke="#222" stroke-width="2"/>
+    <polygon points="42,38 34,8 52,32" fill="${d}" stroke="#222" stroke-width="2"/>
+    <polygon points="88,38 96,8 78,32" fill="${d}" stroke="#222" stroke-width="2"/>
+    ${eye(expr,46,66,11)}
+    ${eye(expr,84,66,11)}
+    ${mouth(expr,65,88,14)}
+  </svg>`;
+}
+
+function spikeSVG(c,d,expr) {
+  const ac=animClass(expr);
+  return `<svg class="${ac}" width="130" height="165" viewBox="0 0 130 165">
+    <polygon points="65,4 58,32 72,32" fill="${d}" stroke="#222" stroke-width="2"/>
+    <polygon points="24,28 40,50 18,56" fill="${d}" stroke="#222" stroke-width="2"/>
+    <polygon points="106,28 90,50 112,56" fill="${d}" stroke="#222" stroke-width="2"/>
+    <polygon points="12,78 40,82 26,106" fill="${d}" stroke="#222" stroke-width="2"/>
+    <polygon points="118,78 90,82 104,106" fill="${d}" stroke="#222" stroke-width="2"/>
+    <circle cx="65" cy="90" r="52" fill="${c}" stroke="#222" stroke-width="3"/>
+    <rect x="40" y="136" width="18" height="22" rx="8" fill="${c}" stroke="#222" stroke-width="2"/>
+    <rect x="72" y="136" width="18" height="22" rx="8" fill="${c}" stroke="#222" stroke-width="2"/>
+    ${eye(expr,65,78,13)}
+    ${mouth(expr,65,100,15)}
+  </svg>`;
+}
+
+function tentacleSVG(c,d,expr) {
+  const ac=animClass(expr);
+  return `<svg class="${ac}" width="130" height="170" viewBox="0 0 130 170">
+    <path d="M30,125 Q16,148 20,168" fill="none" stroke="${c}" stroke-width="13" stroke-linecap="round"/>
+    <path d="M48,133 Q44,156 50,168" fill="none" stroke="${c}" stroke-width="13" stroke-linecap="round"/>
+    <path d="M65,136 Q65,158 67,168" fill="none" stroke="${c}" stroke-width="13" stroke-linecap="round"/>
+    <path d="M82,133 Q86,156 80,168" fill="none" stroke="${c}" stroke-width="13" stroke-linecap="round"/>
+    <path d="M100,125 Q114,148 110,168" fill="none" stroke="${c}" stroke-width="13" stroke-linecap="round"/>
+    <path d="M30,125 Q16,148 20,168" fill="none" stroke="#222" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M48,133 Q44,156 50,168" fill="none" stroke="#222" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M65,136 Q65,158 67,168" fill="none" stroke="#222" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M82,133 Q86,156 80,168" fill="none" stroke="#222" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M100,125 Q114,148 110,168" fill="none" stroke="#222" stroke-width="1.5" stroke-linecap="round"/>
+    <ellipse cx="65" cy="82" rx="56" ry="50" fill="${c}" stroke="#222" stroke-width="3"/>
+    ${eye(expr,42,62,11)}
+    ${eye(expr,65,52,13)}
+    ${eye(expr,88,62,11)}
+    ${mouth(expr,65,86,14)}
+  </svg>`;
+}
+
+function snaggleSVG(c,d,expr) {
+  const ac=animClass(expr);
+  const mSVG = expr==='disgusted'
+    ? `<path d="M40,92 Q65,78 90,92" fill="none" stroke="#222" stroke-width="3" stroke-linecap="round"/>
+       <rect x="56" y="92" width="13" height="20" rx="3" fill="white" stroke="#222" stroke-width="2"/>
+       <ellipse cx="65" cy="106" rx="9" ry="6" fill="#FFB3B3"/>`
+    : expr==='happy'
+    ? `<path d="M40,90 Q65,114 90,90" fill="#FF6B6B" stroke="#222" stroke-width="2.5"/>
+       <rect x="57" y="90" width="12" height="14" rx="3" fill="white" stroke="#222" stroke-width="1.5"/>`
+    : `<path d="M44,93 Q65,106 86,93" fill="#FF6B6B" stroke="#222" stroke-width="2.5"/>
+       <rect x="58" y="93" width="11" height="17" rx="3" fill="white" stroke="#222" stroke-width="2"/>`;
+  return `<svg class="${ac}" width="130" height="158" viewBox="0 0 130 158">
+    <ellipse cx="20" cy="68" rx="16" ry="22" fill="${c}" stroke="#222" stroke-width="2" transform="rotate(-22,20,68)"/>
+    <ellipse cx="110" cy="68" rx="16" ry="22" fill="${c}" stroke="#222" stroke-width="2" transform="rotate(22,110,68)"/>
+    <ellipse cx="65" cy="90" rx="56" ry="54" fill="${c}" stroke="#222" stroke-width="3"/>
+    ${eye(expr,65,62,14)}
+    ${mSVG}
+  </svg>`;
+}
+
+function getMonsterSVG(idx, expr) {
+  const m = MONSTERS[idx];
+  switch(m.type) {
+    case 'blob':     return blobSVG(m.color,m.dark,expr);
+    case 'fluffy':   return fluffySVG(m.color,m.dark,expr);
+    case 'spike':    return spikeSVG(m.color,m.dark,expr);
+    case 'tentacle': return tentacleSVG(m.color,m.dark,expr);
+    case 'snaggle':  return snaggleSVG(m.color,m.dark,expr);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FOOD SVG
+// ═══════════════════════════════════════════════════════════
+
+function pizzaBaseSVG() {
+  return `<g id="food-base">
+    <circle cx="120" cy="120" r="100" fill="#FFD700" stroke="#333" stroke-width="3"/>
+    <circle cx="120" cy="120" r="86" fill="#E8431C"/>
+    <circle cx="120" cy="120" r="72" fill="#FFD055"/>
+    <circle cx="120" cy="120" r="86" fill="none" stroke="#CC3300" stroke-width="1.5"/>
+  </g>`;
+}
+
+function cupcakeBaseSVG() {
+  return `<g id="food-base">
+    <path d="M58,158 L68,98 L172,98 L182,158 Z" fill="#FF6B35" stroke="#333" stroke-width="3"/>
+    <line x1="78" y1="98" x2="70" y2="158" stroke="#CC3300" stroke-width="2" opacity="0.7"/>
+    <line x1="100" y1="98" x2="97" y2="158" stroke="#CC3300" stroke-width="2" opacity="0.7"/>
+    <line x1="120" y1="98" x2="120" y2="158" stroke="#CC3300" stroke-width="2" opacity="0.7"/>
+    <line x1="140" y1="98" x2="143" y2="158" stroke="#CC3300" stroke-width="2" opacity="0.7"/>
+    <line x1="162" y1="98" x2="170" y2="158" stroke="#CC3300" stroke-width="2" opacity="0.7"/>
+    <ellipse cx="120" cy="94" rx="54" ry="27" fill="#FFDDE1" stroke="#333" stroke-width="3"/>
+    <path d="M78,88 Q100,62 120,68 Q140,62 162,88" fill="#FF9999" stroke="#333" stroke-width="2"/>
+    <ellipse cx="120" cy="62" rx="22" ry="20" fill="#FF9999" stroke="#333" stroke-width="2.5"/>
+    <ellipse cx="120" cy="48" rx="14" ry="13" fill="#FFDDE1" stroke="#333" stroke-width="2"/>
+    <circle cx="120" cy="38" r="5" fill="#FF3366" stroke="#333" stroke-width="1.5"/>
+  </g>`;
+}
+
+function cakeBaseSVG() {
+  return `<g id="food-base">
+    <ellipse cx="120" cy="148" rx="88" ry="24" fill="#FFDDE1" stroke="#333" stroke-width="2.5"/>
+    <rect x="32" y="108" width="176" height="52" fill="#FFDDE1" stroke="#333" stroke-width="2.5"/>
+    <ellipse cx="120" cy="108" rx="88" ry="24" fill="#FFD4E8" stroke="#333" stroke-width="2.5"/>
+    <path d="M32,108 Q55,128 78,108 Q101,128 120,108 Q139,128 162,108 Q185,128 208,108" fill="white" stroke="none" opacity="0.6"/>
+    <line x1="32" y1="132" x2="208" y2="132" stroke="#DDD" stroke-width="2" stroke-dasharray="6,4"/>
+  </g>`;
+}
+
+function sundaeBaseSVG() {
+  return `<g id="food-base">
+    <path d="M72,168 L60,90 L180,90 L168,168 Z" fill="rgba(200,240,255,0.4)" stroke="#999" stroke-width="3.5"/>
+    <line x1="72" y1="168" x2="168" y2="168" stroke="#999" stroke-width="3.5"/>
+    <circle cx="120" cy="112" r="34" fill="#FFFDD0" stroke="#DDD" stroke-width="2"/>
+    <circle cx="95" cy="120" r="30" fill="#FFB3BA" stroke="#DDD" stroke-width="2"/>
+    <circle cx="145" cy="120" r="30" fill="#B5EAD7" stroke="#DDD" stroke-width="2"/>
+    <path d="M100,84 Q120,96 140,84 Q136,78 120,86 Q104,78 100,84" fill="#8B4513" opacity="0.7"/>
+  </g>`;
+}
+
+function getFoodSVG(foodKey) {
+  switch(foodKey) {
+    case 'pizza':   return pizzaBaseSVG();
+    case 'cupcake': return cupcakeBaseSVG();
+    case 'cake':    return cakeBaseSVG();
+    case 'sundae':  return sundaeBaseSVG();
+  }
+  return '';
+}
+
+// Food topping placement bounds (cx,cy,r)
+const FOOD_BOUNDS = {
+  pizza:   { cx:120, cy:120, r:70 },
+  cupcake: { cx:120, cy:72,  r:32 },
+  cake:    { cx:120, cy:108, r:76 },
+  sundae:  { cx:120, cy:110, r:40 },
+};
+
+// ═══════════════════════════════════════════════════════════
+//  TOPPING SVG
+// ═══════════════════════════════════════════════════════════
+
+function toppingSVG(type, x, y) {
+  const s = 16;
+  const g = (inner) => `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)})">${inner}</g>`;
+  switch(type) {
+    case 'mushroom':
+      return g(`<ellipse cx="0" cy="${-s*.25}" rx="${s*.85}" ry="${s*.6}" fill="#8B4513" stroke="#333" stroke-width="1.5"/>
+                <rect x="${-s*.3}" y="${-s*.1}" width="${s*.6}" height="${s*.7}" rx="2" fill="#F5DEB3" stroke="#333" stroke-width="1.5"/>`);
+    case 'pepper':
+      return g(`<ellipse cx="0" cy="0" rx="${s*.38}" ry="${s*.85}" fill="#FF4500" stroke="#333" stroke-width="1.5"/>
+                <path d="M0,${-s*.85} Q${s*.2},${-s*1.1} ${s*.1},${-s*1.3}" fill="none" stroke="#2D5A1B" stroke-width="2"/>`);
+    case 'olive':
+      return g(`<circle cx="0" cy="0" r="${s*.65}" fill="#556B2F" stroke="#333" stroke-width="1.5"/>
+                <circle cx="0" cy="0" r="${s*.27}" fill="#CC0000"/>`);
+    case 'pepperoni':
+      return g(`<circle cx="0" cy="0" r="${s*.75}" fill="#CC3300" stroke="#333" stroke-width="1.5"/>
+                <circle cx="${-s*.25}" cy="${-s*.2}" r="${s*.15}" fill="#AA2200"/>
+                <circle cx="${s*.22}" cy="${s*.1}" r="${s*.12}" fill="#AA2200"/>`);
+    case 'cherry': {
+      const stem = `<path d="M0,${-s*.2} Q${-s*.4},${-s*.9} ${-s*.25},${-s*1.15}" fill="none" stroke="#2D5A1B" stroke-width="2"/>`;
+      return g(`${stem}
+                <circle cx="${-s*.32}" cy="${s*.28}" r="${s*.58}" fill="#CC0000" stroke="#333" stroke-width="1.5"/>
+                <circle cx="${s*.32}" cy="${s*.28}" r="${s*.58}" fill="#CC0000" stroke="#333" stroke-width="1.5"/>
+                <circle cx="${-s*.5}" cy="${s*.1}" r="${s*.14}" fill="#FF6666"/>
+                <circle cx="${s*.18}" cy="${s*.08}" r="${s*.14}" fill="#FF6666"/>`);
+    }
+    case 'sprinkles': {
+      const colors=['#FF69B4','#00BFFF','#FFD700','#7CFC00','#FF4500'];
+      const c=colors[Math.floor(Math.random()*colors.length)];
+      const a=(Math.random()*160).toFixed(0);
+      return g(`<rect x="${-s*.5}" y="${-s*.14}" width="${s}" height="${s*.28}" rx="${s*.14}" fill="${c}" stroke="#333" stroke-width="0.5" transform="rotate(${a})"/>`);
+    }
+    case 'candle':
+      return g(`<rect x="${-s*.25}" y="${-s*.35}" width="${s*.5}" height="${s*.95}" rx="3" fill="#FFD700" stroke="#333" stroke-width="1.5"/>
+                <ellipse cx="0" cy="${-s*.55}" rx="${s*.16}" ry="${s*.3}" fill="#FF4500"/>
+                <ellipse cx="0" cy="${-s*.6}" rx="${s*.09}" ry="${s*.16}" fill="#FFD700"/>`);
+    case 'chocchip':
+      return g(`<ellipse cx="0" cy="0" rx="${s*.58}" ry="${s*.45}" fill="#3D2B1F" stroke="#333" stroke-width="1.5"/>
+                <ellipse cx="${-s*.1}" cy="${-s*.1}" rx="${s*.22}" ry="${s*.16}" fill="#5C3D2E" opacity="0.6"/>`);
+    case 'strawberry':
+      return g(`<path d="M0,${s*.8} L${-s*.72},${-s*.15} Q0,${-s*.82} ${s*.72},${-s*.15} Z" fill="#FF3366" stroke="#333" stroke-width="1.5"/>
+                <path d="M${-s*.2},${-s*.7} Q0,${-s*1.2} ${s*.2},${-s*.7}" fill="none" stroke="#2D5A1B" stroke-width="2"/>
+                <circle cx="${-s*.22}" cy="${s*.1}" r="${s*.1}" fill="#FFB3C6"/>
+                <circle cx="${s*.2}" cy="${s*.32}" r="${s*.1}" fill="#FFB3C6"/>`);
+    case 'banana':
+      return g(`<path d="M${-s*.85},${s*.2} Q0,${-s*.85} ${s*.85},${s*.2}" fill="none" stroke="#FFE135" stroke-width="${s*.5}" stroke-linecap="round"/>
+                <path d="M${-s*.85},${s*.2} Q0,${-s*.85} ${s*.85},${s*.2}" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>`);
+  }
+  return '';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SLICE LINES
+// ═══════════════════════════════════════════════════════════
+
+function sliceLinesSVG(numSlices, cx, cy, r) {
+  if (numSlices <= 1) return '';
+  let out = '';
+  const step = Math.PI / numSlices;
+  for (let i = 0; i < numSlices; i++) {
+    const a = i * step;
+    const x1 = cx + r * Math.cos(a), y1 = cy + r * Math.sin(a);
+    const x2 = cx - r * Math.cos(a), y2 = cy - r * Math.sin(a);
+    out += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#333" stroke-width="2.5" stroke-linecap="round"/>`;
+  }
+  return out;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDERING
+// ═══════════════════════════════════════════════════════════
+
+function renderMonster() {
+  const area = document.getElementById('monster-area');
+  const expr = G.phase==='correct' ? 'happy' : G.phase==='wrong' ? 'disgusted' : 'idle';
+  const mSVG = getMonsterSVG(G.monsterIdx, expr);
+  let bubble = '';
+
+  if (G.phase === 'correct') {
+    bubble = `<div class="speech-bubble pop-in">😋 <strong>Yum!</strong><br>Thank you!</div>`;
+  } else if (G.phase === 'wrong') {
+    bubble = buildWrongBubble(G.wrongErrors);
+  } else {
+    bubble = buildOrderBubble(G.order);
+  }
+
+  area.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;justify-content:center;width:100%;padding:0 4px;">
+      <div class="monster-wrapper">${mSVG}</div>
+      ${bubble}
+    </div>`;
+}
+
+function buildOrderBubble(order) {
+  if (!order) return '';
+  const food = FOODS[order.food];
+  const fractionName = { 2:'halves', 3:'thirds', 4:'quarters', 6:'sixths', 8:'eighths' };
+  let rows = [];
+  if (order.slices > 0) {
+    rows.push(`<div class="order-item">✂️ Cut into <strong>${order.slices}</strong> ${fractionName[order.slices]||'pieces'}</div>`);
+  }
+  for (const t of order.toppings) {
+    const tp = TOPPINGS[t.type];
+    const cnt = t.count;
+    const dots = '●'.repeat(Math.min(cnt, 8));
+    const perS = t.perSlice ? ' <small style="color:#888">per slice</small>' : '';
+    rows.push(`<div class="order-item">${tp.emoji} ×<strong>${cnt}</strong> <span class="dots">${dots}</span>${perS}</div>`);
+  }
+  return `<div class="speech-bubble">
+    <div class="order-food">${food.emoji} ${food.name}</div>
+    ${rows.join('')}
+  </div>`;
+}
+
+function buildWrongBubble(errors) {
+  let rows = errors.map(e => {
+    if (e.type === 'slices') {
+      const nd = '●'.repeat(Math.min(e.need,8)), gd = '●'.repeat(Math.min(e.got,8));
+      return `<div class="order-item error-item">✂️ need <strong>${e.need}</strong> <span class="dots">${nd}</span> got ${e.got} <span class="dots" style="color:#aaa">${gd}</span></div>`;
+    }
+    const tp = TOPPINGS[e.type];
+    const nd = '●'.repeat(Math.min(e.need,8)), gd = '●'.repeat(Math.min(e.got,8));
+    return `<div class="order-item error-item">${tp.emoji} need <strong>${e.need}</strong> <span class="dots">${nd}</span> got ${e.got} <span class="dots" style="color:#aaa">${gd}</span></div>`;
+  });
+  return `<div class="speech-bubble disgust-bubble pop-in">
+    <div style="font-size:1rem;font-weight:900">😝 Blegh!</div>
+    ${rows.join('')}
+    <div style="font-size:0.72rem;color:#888;margin-top:3px">Try again! 👆</div>
+  </div>`;
+}
+
+function renderPrepArea() {
+  const area = document.getElementById('prep-area');
+  const ps = G.plate;
+  if (!ps.food) return;
+  const bounds = FOOD_BOUNDS[ps.food];
+  let topSVG = ps.positions.map(p => toppingSVG(p.type, p.x, p.y)).join('');
+  let sliceSVG = '';
+  if (ps.slices > 0 && FOODS[ps.food].sliceable) {
+    sliceSVG = sliceLinesSVG(ps.slices, bounds.cx, bounds.cy, bounds.r + 10);
+  }
+  area.innerHTML = `<svg width="240" height="240" viewBox="0 0 240 240" style="filter:drop-shadow(3px 5px 10px rgba(0,0,0,0.22));overflow:visible">
+    ${getFoodSVG(ps.food)}
+    ${topSVG}
+    ${sliceSVG}
+  </svg>`;
+}
+
+function renderBins() {
+  const order = G.order;
+  if (!order) return;
+  const food = FOODS[order.food];
+  const binsEl = document.getElementById('bins');
+  let html = '';
+
+  for (const tk of food.toppings) {
+    const t = TOPPINGS[tk];
+    const count = G.plate.toppings[tk] || 0;
+    const minusBtn = count > 0
+      ? `<div class="bin-minus" onclick="event.stopPropagation();removeTopping('${tk}')">−</div>` : '';
+    const countBadge = count > 0
+      ? `<div class="bin-count">${count}</div>` : '';
+    html += `<div class="bin" onclick="addTopping('${tk}')">
+      <div class="bin-emoji">${t.emoji}</div>
+      <div class="bin-label">${t.name}</div>
+      ${countBadge}
+      ${minusBtn}
+    </div>`;
+  }
+
+  if (food.sliceable) {
+    const sl = G.plate.slices;
+    html += `<div class="bin ${sl>0?'bin-active':''}" id="slice-bin" onclick="showSliceMenu()">
+      <div class="bin-emoji">✂️</div>
+      <div class="bin-label">slice</div>
+      ${sl > 0 ? `<div class="bin-count">${sl}</div>` : ''}
+    </div>`;
+  }
+
+  binsEl.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INTERACTION
+// ═══════════════════════════════════════════════════════════
+
+function addTopping(type) {
+  if (G.phase !== 'playing') return;
+  const b = FOOD_BOUNDS[G.plate.food];
+  const angle = Math.random() * 2 * Math.PI;
+  const dist  = Math.sqrt(Math.random()) * b.r * 0.82;
+  const x = b.cx + dist * Math.cos(angle);
+  const y = b.cy + dist * Math.sin(angle);
+  G.plate.toppings[type] = (G.plate.toppings[type] || 0) + 1;
+  G.plate.positions.push({ type, x, y });
+  playSound('blip');
+  renderPrepArea();
+  renderBins();
+}
+
+function removeTopping(type) {
+  if (G.phase !== 'playing') return;
+  if (!G.plate.toppings[type]) return;
+  G.plate.toppings[type]--;
+  if (G.plate.toppings[type] === 0) delete G.plate.toppings[type];
+  for (let i = G.plate.positions.length-1; i >= 0; i--) {
+    if (G.plate.positions[i].type === type) { G.plate.positions.splice(i,1); break; }
+  }
+  renderPrepArea();
+  renderBins();
+}
+
+function showSliceMenu() {
+  if (G.phase !== 'playing') return;
+  const existing = document.getElementById('slice-popup');
+  if (existing) { existing.remove(); return; }
+
+  const popup = document.createElement('div');
+  popup.id = 'slice-popup';
+  popup.innerHTML = '<span style="font-size:0.85rem;font-weight:bold;color:#555;margin-right:4px">Cut into:</span>';
+  for (const n of [2,3,4,6,8]) {
+    const btn = document.createElement('button');
+    btn.className = 'slice-btn' + (G.plate.slices===n ? ' selected' : '');
+    btn.textContent = n;
+    btn.onclick = () => { setSlices(n); popup.remove(); };
+    popup.appendChild(btn);
+  }
+  document.body.appendChild(popup);
+  setTimeout(() => { const p = document.getElementById('slice-popup'); if(p) p.remove(); }, 6000);
+
+  document.addEventListener('click', function onOutside(e) {
+    if (!popup.contains(e.target) && !e.target.closest('#slice-bin')) {
+      popup.remove();
+      document.removeEventListener('click', onOutside);
+    }
+  }, { capture:true, once:false });
+}
+
+function setSlices(n) {
+  G.plate.slices = n;
+  playSound('swish');
+  renderPrepArea();
+  renderBins();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  VALIDATION
+// ═══════════════════════════════════════════════════════════
+
+function serveOrder() {
+  if (G.phase !== 'playing') return;
+  const order = G.order;
+  const ps = G.plate;
+  const errors = [];
+
+  if (order.slices > 0 && ps.slices !== order.slices) {
+    errors.push({ type:'slices', need:order.slices, got:ps.slices });
+  }
+  for (const t of order.toppings) {
+    const required = t.perSlice ? t.count * order.slices : t.count;
+    const actual = ps.toppings[t.type] || 0;
+    if (actual !== required) {
+      errors.push({ type:t.type, need:required, got:actual });
+    }
+  }
+
+  if (errors.length === 0) {
+    correctOrder();
+  } else {
+    wrongOrder(errors);
+  }
+}
+
+function correctOrder() {
+  G.phase = 'correct';
+  G.stars++;
+  G.correctAtLevel++;
+  save();
+  playSound('correct');
+  renderMonster();
+  document.getElementById('star-count').textContent = G.stars;
+  burstStars();
+  setTimeout(() => {
+    if (G.correctAtLevel >= 5) {
+      showCelebration();
+    } else {
+      nextOrder();
+    }
+  }, 2000);
+}
+
+function wrongOrder(errors) {
+  G.phase = 'wrong';
+  G.wrongErrors = errors;
+  playSound('wrong');
+  renderMonster();
+  setTimeout(() => {
+    G.phase = 'playing';
+    G.wrongErrors = [];
+    renderMonster();
+  }, 2600);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PROGRESSION
+// ═══════════════════════════════════════════════════════════
+
+function showCelebration() {
+  const celeb = document.getElementById('celebration');
+  document.getElementById('celeb-text').textContent = `You served ${G.correctAtLevel} monsters!`;
+  document.getElementById('celeb-stars').textContent = '⭐'.repeat(Math.min(G.correctAtLevel,5));
+  const wasLevel = G.level;
+  if (G.level < 6) {
+    G.level++;
+    document.getElementById('celeb-level').textContent = `Level ${G.level} unlocked! 🎉`;
+  } else {
+    document.getElementById('celeb-level').textContent = 'You\'re a Monster Café master! 🌟';
+  }
+  G.correctAtLevel = 0;
+  save();
+  celeb.style.display = 'flex';
+  playSound('star');
+  document.getElementById('level-badge').textContent = `Lv.${G.level}`;
+}
+
+function continuePlaying() {
+  document.getElementById('celebration').style.display = 'none';
+  nextOrder();
+}
+
+function nextOrder() {
+  G.monsterIdx = (G.monsterIdx + 1) % MONSTERS.length;
+  G.order = generateOrder(G.level);
+  G.plate = { food:G.order.food, slices:0, toppings:{}, positions:[] };
+  G.phase = 'playing';
+  renderMonster();
+  renderPrepArea();
+  renderBins();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════════════════════
+
+document.getElementById('settings-btn').addEventListener('click', () => {
+  document.getElementById('level-display').textContent = G.level;
+  document.getElementById('stars-display').textContent = G.stars;
+  document.getElementById('sound-btn').textContent = G.soundOn ? '🔊 Sound: ON' : '🔇 Sound: OFF';
+  document.getElementById('settings-modal').style.display = 'flex';
+});
+function closeSettings() {
+  document.getElementById('settings-modal').style.display = 'none';
+}
+function toggleSound() {
+  G.soundOn = !G.soundOn;
+  save();
+  document.getElementById('sound-btn').textContent = G.soundOn ? '🔊 Sound: ON' : '🔇 Sound: OFF';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  AUDIO
+// ═══════════════════════════════════════════════════════════
+
+let _actx = null;
+function actx() {
+  if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
+  return _actx;
+}
+
+function playSound(type) {
+  if (!G.soundOn) return;
+  try {
+    const ctx = actx();
+    if (ctx.state === 'suspended') ctx.resume();
+    switch(type) {
+      case 'blip':    _blip(ctx);    break;
+      case 'swish':   _swish(ctx);   break;
+      case 'correct': _correct(ctx); break;
+      case 'wrong':   _wrong(ctx);   break;
+      case 'star':    _star(ctx);    break;
+    }
+  } catch(e) {}
+}
+
+function _osc(ctx, freq, type='sine', t=0, dur=0.18, vol=0.35) {
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = type; o.frequency.value = freq;
+  o.connect(g); g.connect(ctx.destination);
+  g.gain.setValueAtTime(vol, ctx.currentTime+t);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+t+dur);
+  o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+dur);
+}
+
+function _blip(ctx)    { _osc(ctx,620,'triangle',0,0.08,0.28); }
+function _swish(ctx)   {
+  const buf=ctx.createBuffer(1,ctx.sampleRate*0.12,ctx.sampleRate);
+  const d=buf.getChannelData(0);
+  for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length);
+  const s=ctx.createBufferSource(), g=ctx.createGain();
+  s.buffer=buf; s.connect(g); g.connect(ctx.destination);
+  g.gain.value=0.35; s.start();
+}
+function _correct(ctx) {
+  [523,659,784].forEach((f,i)=>_osc(ctx,f,'triangle',i*0.13,0.22,0.38));
+}
+function _wrong(ctx)   {
+  _osc(ctx,392,'sawtooth',0,0.28,0.28);
+  _osc(ctx,330,'sawtooth',0.22,0.3,0.25);
+}
+function _star(ctx)    {
+  [1046,1318,1568,2093].forEach((f,i)=>_osc(ctx,f,'sine',i*0.1,0.2,0.32));
+}
+
+// ═══════════════════════════════════════════════════════════
+//  STAR BURST EFFECT
+// ═══════════════════════════════════════════════════════════
+
+function burstStars() {
+  for (let i = 0; i < 5; i++) {
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'star-burst';
+      el.textContent = '⭐';
+      el.style.left = (20 + Math.random() * 60) + 'vw';
+      el.style.top  = (10 + Math.random() * 40) + 'vh';
+      el.style.animationDuration = (0.5 + Math.random()*0.4) + 's';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 900);
+    }, i * 100);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+
+loadSave();
+document.getElementById('star-count').textContent = G.stars;
+document.getElementById('level-badge').textContent = `Lv.${G.level}`;
+nextOrder();
+</script>
+</body>
+</html>
