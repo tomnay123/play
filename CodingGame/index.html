@@ -30,6 +30,7 @@
         <div class="stage-head">
           <span id="level-tag" class="level-tag"></span>
           <h1 id="level-title"></h1>
+          <span id="level-concept" class="concept-tag"></span>
         </div>
         <div class="board-wrap">
           <canvas id="board"></canvas>
@@ -47,6 +48,11 @@
         <h2 class="step"><span class="num">2</span>Your program <span id="count" class="count"></span></h2>
         <div id="program" class="program"></div>
         <p class="hint">Tap a block in your program to take it out.</p>
+
+        <div id="fn-wrap" hidden>
+          <h2 class="step"><span class="num fn-num">✨</span>My block <small>a new move you make yourself</small></h2>
+          <div id="fn" class="program fn"></div>
+        </div>
 
         <div class="controls">
           <button id="run" class="btn btn-go">▶ Go!</button>
@@ -67,6 +73,16 @@
         <button id="next" class="btn btn-go">Next level ➜</button>
         <button id="replay" class="btn btn-clear">Play again</button>
       </div>
+    </div>
+  </div>
+
+  <div id="intro" class="overlay" hidden>
+    <div class="win-card intro-card" role="dialog" aria-modal="true" aria-labelledby="intro-title">
+      <span class="new-badge">New block!</span>
+      <div id="intro-block" class="intro-block"></div>
+      <h2 id="intro-title"></h2>
+      <p id="intro-text"></p>
+      <button id="intro-go" class="btn btn-go">Let's go!</button>
     </div>
   </div>
 

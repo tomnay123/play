@@ -1,9 +1,12 @@
-// Levels: '#' tree (blocked), '.' grass, 'R' robot start (facing right), '*' star.
-// `blocks` lists the blocks unlocked on that level; `maxBlocks` caps program size.
+// Levels: '#' tree and '~' water (both blocked), '.' grass, 'R' robot start
+// (facing right), '*' star. Collect every star to win.
+// `blocks` lists the blocks unlocked on that level; `maxBlocks` caps program size;
+// `intro` shows a "New block!" card the first time the level is played.
 const BASIC = ['forward', 'left', 'right'];
 const LEVELS = [
   {
     name: 'Get the star!',
+    concept: 'Moving',
     hint: 'Tap the blue arrow to move forward, then press Go!',
     blocks: BASIC,
     map: [
@@ -16,6 +19,7 @@ const LEVELS = [
   },
   {
     name: 'Turn the corner',
+    concept: 'Turning',
     hint: 'Use a turn block to change direction.',
     blocks: BASIC,
     map: [
@@ -28,6 +32,7 @@ const LEVELS = [
   },
   {
     name: 'Zig zag',
+    concept: 'Planning',
     hint: 'Turn left and right to find the way.',
     blocks: BASIC,
     map: [
@@ -41,9 +46,15 @@ const LEVELS = [
   },
   {
     name: 'Staircase',
+    concept: 'Loops',
     hint: 'The same steps happen again and again. Put them inside a Repeat block!',
     blocks: [...BASIC, 'repeat'],
     maxBlocks: 6,
+    intro: {
+      block: 'repeat',
+      title: 'Repeat',
+      text: 'Repeat runs the blocks inside it again and again, so you don\'t have to tap them lots of times.',
+    },
     map: [
       '#####*',
       '####..',
@@ -51,6 +62,83 @@ const LEVELS = [
       '##..##',
       '#..###',
       'R.####',
+    ],
+  },
+  {
+    name: 'Around the pond',
+    concept: 'Loops inside loops',
+    hint: 'Collect every star! Each side is the same: walk, then turn. Try a Repeat inside a Repeat.',
+    blocks: [...BASIC, 'repeat'],
+    maxBlocks: 4,
+    intro: {
+      block: 'repeat',
+      title: 'Loops inside loops',
+      text: 'You can put a Repeat inside another Repeat! The inside one runs all the way through every time the outside one goes round.',
+    },
+    map: [
+      'R...*',
+      '*~~~.',
+      '.~~~.',
+      '.~~~.',
+      '*...*',
+    ],
+  },
+  {
+    name: 'The long road',
+    concept: 'Repeat until',
+    hint: 'This road is too long to count. Keep going until you get the star!',
+    blocks: [...BASIC, 'repeat', 'until'],
+    maxBlocks: 2,
+    intro: {
+      block: 'until',
+      title: 'Repeat until ⭐',
+      text: 'Repeat until ⭐ keeps going round and round until the robot gets the star. No counting needed!',
+    },
+    map: [
+      '###########',
+      '#~~~##~~~##',
+      'R.........*',
+      '##~~###~~##',
+      '###########',
+    ],
+  },
+  {
+    name: 'Snail shell',
+    concept: 'If / otherwise',
+    hint: 'Repeat until ⭐: IF there is a path ahead, go forward. OTHERWISE, turn right.',
+    blocks: [...BASIC, 'until', 'if'],
+    maxBlocks: 4,
+    intro: {
+      block: 'if',
+      title: 'If',
+      text: 'If lets the robot decide! It checks something, like "is there a path ahead?", then does one set of blocks for YES and another for NO.',
+    },
+    map: [
+      'R......',
+      '######.',
+      '.....#.',
+      '.###.#.',
+      '.#*..#.',
+      '.#####.',
+      '.......',
+    ],
+  },
+  {
+    name: 'Hurdles',
+    concept: 'Make your own block',
+    hint: 'Teach the robot to hop over a tree in "My block", then use it every time there\'s a tree.',
+    blocks: [...BASIC, 'call'],
+    maxBlocks: 18,
+    intro: {
+      block: 'call',
+      title: 'My block',
+      text: 'Build a new move once in "My block", then use it as many times as you like. Programmers call this a function.',
+    },
+    map: [
+      '#############',
+      '#...#...#...#',
+      'R.#...#...#.*',
+      '#############',
     ],
   },
 ];
@@ -61,21 +149,30 @@ const BLOCKS = {
   left: { label: 'Turn left', icon: '<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v5"/>' },
   right: { label: 'Turn right', icon: '<path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0-6 6v5"/>' },
   repeat: { label: 'Repeat', icon: '<path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>' },
+  until: { label: 'Until ⭐', icon: '<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 3v5h-5"/><path d="M12 9l1 2 2 .3-1.5 1.4.4 2.1-1.9-1-1.9 1 .4-2.1L9 11.3l2-.3z"/>' },
+  if: { label: 'If', icon: '<path d="M12 2l10 10-10 10L2 12z"/><path d="M10 9.5a2 2 0 1 1 2.8 1.8c-.5.3-.8.8-.8 1.4V13"/><path d="M12 16.5v.01"/>' },
+  call: { label: 'My block', icon: '<path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/><path d="M19 17v4M17 19h4"/>' },
 };
+const CONTAINERS = ['repeat', 'until', 'if'];
+const CONDITIONS = { ahead: 'path ahead', left: 'path on the left', right: 'path on the right' };
 
 const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]]; // right, down, left, up
 const MOVE_MS = 420;
 const TURN_MS = 320;
+const CHECK_MS = 450;
 const PAUSE_MS = 110;
+const MAX_STEPS = 300; // backup for loops that never reach the star
 const MIN_TIMES = 2;
 const MAX_TIMES = 9;
-const SIZE = 480; // board size in canvas pixels, before device scaling
+const SIZE = 480; // longest board side in canvas pixels, before device scaling
 
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
 const levelsEl = document.getElementById('levels');
 const paletteEl = document.getElementById('palette');
 const programEl = document.getElementById('program');
+const fnWrapEl = document.getElementById('fn-wrap');
+const fnEl = document.getElementById('fn');
 const countEl = document.getElementById('count');
 const bubbleEl = document.getElementById('bubble');
 const statusEl = document.getElementById('status');
@@ -85,20 +182,26 @@ const soundBtn = document.getElementById('sound');
 const winEl = document.getElementById('win');
 const nextBtn = document.getElementById('next');
 const replayBtn = document.getElementById('replay');
+const introEl = document.getElementById('intro');
 
-// The program is a list of blocks like { type: 'forward' }.
-// A repeat block also has `times` and a `body` list of blocks.
+// A program is a list of blocks like { type: 'forward' }. Container blocks hold
+// lists of their own: repeat/until have `body`, if has `body` (yes) and `other` (no).
+// `fnBody` is the list of blocks inside "My block".
 let levelIndex = 0;
 let program = [];
-let target = null; // the repeat block new blocks go into, or null for the main program
+let fnBody = [];
+let target = program; // the list that tapped blocks go into
 let running = false;
 let justAdded = null; // block to animate in on the next render
 let errorBlock = null; // block where the robot bumped into something
 let robot; // where the robot really is, in whole cells
 let view; // where the robot is drawn, mid-animation
-let goal;
+let stars = [];
 let trail = [];
 let confetti = [];
+let cell = 0;
+let boardW = SIZE;
+let boardH = SIZE;
 let completed = new Set(load('robotcode.completed', []));
 let muted = load('robotcode.muted', false);
 
@@ -150,6 +253,12 @@ const SOUNDS = {
   remove: () => tone(300, 0.12, { type: 'triangle' }),
   move: () => tone(520, 0.08, { vol: 0.08 }),
   turn: () => tone(400, 0.08, { vol: 0.08 }),
+  yes: () => tone(880, 0.1, { vol: 0.08 }),
+  no: () => tone(240, 0.12, { vol: 0.08 }),
+  collect: () => {
+    tone(988, 0.12, { type: 'triangle' });
+    tone(1319, 0.2, { type: 'triangle', delay: 0.08 });
+  },
   bonk: () => {
     tone(140, 0.25, { type: 'square', vol: 0.07 });
     tone(90, 0.3, { type: 'square', delay: 0.08, vol: 0.07 });
@@ -170,25 +279,49 @@ function icon(type) {
 function makeBlock(type) {
   const el = document.createElement('button');
   el.className = `block ${type}`;
+  el.dataset.type = type;
   el.innerHTML = `${icon(type)}<span>${BLOCKS[type].label}</span>`;
   return el;
 }
 
+function newBlock(type) {
+  if (type === 'repeat') return { type, times: 3, body: [] };
+  if (type === 'until') return { type, body: [] };
+  if (type === 'if') return { type, cond: 'ahead', body: [], other: [] };
+  return { type };
+}
+
+function listsOf(block) {
+  if (block.type === 'if') return [block.body, block.other];
+  return block.body ? [block.body] : [];
+}
+
 function countBlocks(list) {
-  return list.reduce((n, b) => n + 1 + (b.body ? countBlocks(b.body) : 0), 0);
+  return list.reduce((n, b) => n + 1 + listsOf(b).reduce((m, l) => m + countBlocks(l), 0), 0);
+}
+
+// Is `list` the same as `root`, or somewhere inside it?
+function within(list, root) {
+  return list === root || root.some((b) => listsOf(b).some((l) => within(list, l)));
+}
+
+function totalBlocks() {
+  return countBlocks(program) + countBlocks(fnBody);
 }
 
 function addBlock(type) {
   if (running) return;
   const max = LEVELS[levelIndex].maxBlocks;
-  if (max && countBlocks(program) >= max) {
-    setStatus(`You can only use ${max} blocks here. Try a Repeat block!`, 'oops');
+  if (max && totalBlocks() >= max) {
+    setStatus(`You can only use ${max} blocks here. Can you find a shorter way?`, 'oops');
     SOUNDS.oops();
     return;
   }
-  const block = type === 'repeat' ? { type, times: 3, body: [] } : { type };
-  (target ? target.body : program).push(block);
-  if (type === 'repeat') target = block;
+  // "My block" can't use itself, or it would never stop.
+  if (type === 'call' && within(target, fnBody)) return;
+  const block = newBlock(type);
+  target.push(block);
+  if (CONTAINERS.includes(type)) target = block.body;
   justAdded = block;
   errorBlock = null;
   SOUNDS.add();
@@ -197,41 +330,61 @@ function addBlock(type) {
 
 function removeBlock(list, i) {
   if (running) return;
-  if (list[i] === target) target = null;
+  if (listsOf(list[i]).some((l) => within(target, l))) target = list;
   list.splice(i, 1);
   errorBlock = null;
   SOUNDS.remove();
   render();
 }
 
+function select(list) {
+  if (running) return;
+  target = list;
+  render();
+}
+
 function render(active = null) {
-  // No repeats inside repeats, to keep things simple.
   for (const el of paletteEl.children) {
-    el.disabled = running || (el.classList.contains('repeat') && target !== null);
+    el.disabled = running || (el.dataset.type === 'call' && within(target, fnBody));
   }
 
-  programEl.classList.toggle('selected', target === null && !running);
-  if (program.length === 0) {
-    programEl.innerHTML = '<div class="empty">Tap the blocks above to build your program 👆</div>';
-  } else {
-    programEl.replaceChildren(...program.map((block, i) =>
-      block.type === 'repeat'
-        ? renderRepeat(block, i, active)
-        : renderStep(block, program, i, active)));
+  programEl.classList.toggle('selected', target === program && !running);
+  programEl.replaceChildren(...renderList(program, active, 'Tap the blocks above to build your program 👆'));
+
+  const hasFn = LEVELS[levelIndex].blocks.includes('call');
+  fnWrapEl.hidden = !hasFn;
+  if (hasFn) {
+    fnEl.classList.toggle('selected', target === fnBody && !running);
+    fnEl.classList.toggle('running', Boolean(active?.stack.some((s) => s.block.type === 'call')));
+    fnEl.replaceChildren(...renderList(fnBody, active, 'Tap here, then tap blocks to teach the robot a new move ✨'));
   }
 
   const max = LEVELS[levelIndex].maxBlocks;
-  const used = countBlocks(program);
+  const used = totalBlocks();
   countEl.textContent = max ? `${used} / ${max} blocks` : '';
   countEl.classList.toggle('full', Boolean(max) && used >= max);
   justAdded = null;
+}
+
+function renderList(list, active, emptyText) {
+  if (list.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = emptyText;
+    return [empty];
+  }
+  return list.map((block, i) => (CONTAINERS.includes(block.type)
+    ? renderContainer(block, list, i, active)
+    : renderStep(block, list, i, active)));
 }
 
 function renderStep(block, list, i, active) {
   const el = makeBlock(block.type);
   if (block === justAdded) el.classList.add('pop');
   if (block === errorBlock) el.classList.add('error');
-  if (active && active.block === block) el.classList.add('active');
+  if (active && (active.block === block || active.stack.some((s) => s.block === block))) {
+    el.classList.add('active');
+  }
   el.addEventListener('click', (e) => {
     e.stopPropagation();
     removeBlock(list, i);
@@ -239,38 +392,66 @@ function renderStep(block, list, i, active) {
   return el;
 }
 
-function renderRepeat(block, i, active) {
+function renderContainer(block, list, i, active) {
   const box = document.createElement('div');
-  box.className = 'repeat-box';
-  const selected = target === block && !running;
-  const looping = active && active.loop && active.loop.block === block;
+  box.className = `container ${block.type}`;
+  const mine = listsOf(block);
+  const entry = active?.stack.find((s) => s.block === block);
+  const checking = active?.block === block;
+  const selected = !running && mine.includes(target);
   box.classList.toggle('pop', block === justAdded);
   box.classList.toggle('selected', selected);
-  box.classList.toggle('looping', Boolean(looping));
+  box.classList.toggle('looping', Boolean(entry || checking));
 
-  const head = document.createElement('div');
-  head.className = 'repeat-head';
-  head.innerHTML = looping
-    ? `${icon('repeat')} Repeat <span class="round">Round ${active.loop.round} of ${block.times}</span>`
-    : `${icon('repeat')} Repeat
-       <span class="stepper">
-         <button class="less" aria-label="Fewer times">−</button>
-         <span class="times">${block.times}</span>
-         <button class="more" aria-label="More times">+</button>
-       </span> times
-       ${selected ? '<button class="done">✓ Done</button>' : ''}
-       <button class="remove" aria-label="Remove repeat">✖</button>`;
-
-  const body = document.createElement('div');
-  body.className = 'repeat-body';
-  if (block.body.length === 0) {
-    body.innerHTML = '<div class="empty">Tap blocks to put them in here</div>';
+  const titles = { repeat: 'Repeat', until: 'Repeat until ⭐', if: 'If' };
+  let head = `${icon(block.type)}<span>${titles[block.type]}</span>`;
+  if (!running) {
+    if (block.type === 'repeat') {
+      head += `<span class="stepper">
+          <button class="less" aria-label="Fewer times">−</button>
+          <span class="times">${block.times}</span>
+          <button class="more" aria-label="More times">+</button>
+        </span><span>times</span>`;
+    }
+    if (block.type === 'if') {
+      head += `<button class="cond" title="Tap to change">${CONDITIONS[block.cond]}? 🔄</button>`;
+    }
+    if (selected) head += '<button class="done">✓ Done</button>';
+    head += '<button class="remove" aria-label="Remove block">✖</button>';
   } else {
-    body.append(...block.body.map((child, j) => renderStep(child, block.body, j, active)));
+    if (block.type === 'repeat' && !entry) head += `<span>${block.times} times</span>`;
+    if (block.type === 'if') head += `<span class="cond">${CONDITIONS[block.cond]}?</span>`;
+    const chip = checking ? (active.check ? 'Yes ✓' : 'No ✗') : entry?.label;
+    if (chip) head += `<span class="round">${chip}</span>`;
   }
-  box.append(head, body);
+  const headEl = document.createElement('div');
+  headEl.className = 'c-head';
+  headEl.innerHTML = head;
+  box.append(headEl);
 
-  const on = (selector, fn) => head.querySelector(selector)?.addEventListener('click', (e) => {
+  const slots = block.type === 'if'
+    ? [['body', 'YES: tap blocks to put them here'], ['other', 'NO: tap blocks to put them here']]
+    : [['body', 'Tap blocks to put them in here']];
+  for (const [key, emptyText] of slots) {
+    if (key === 'other') {
+      const label = document.createElement('div');
+      label.className = 'arm-label';
+      label.textContent = 'otherwise';
+      box.append(label);
+    }
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+    slot.classList.toggle('selected', !running && target === block[key]);
+    slot.classList.toggle('taken', entry?.branch === key);
+    slot.append(...renderList(block[key], active, emptyText));
+    slot.addEventListener('click', (e) => {
+      e.stopPropagation();
+      select(block[key]);
+    });
+    box.append(slot);
+  }
+
+  const on = (selector, fn) => headEl.querySelector(selector)?.addEventListener('click', (e) => {
     e.stopPropagation();
     if (!running) fn();
   });
@@ -284,23 +465,26 @@ function renderRepeat(block, i, active) {
     SOUNDS.turn();
     render();
   });
-  on('.done', () => {
-    target = null;
+  on('.cond', () => {
+    const keys = Object.keys(CONDITIONS);
+    block.cond = keys[(keys.indexOf(block.cond) + 1) % keys.length];
+    SOUNDS.turn();
     render();
   });
-  on('.remove', () => removeBlock(program, i));
+  on('.done', () => select(list));
+  on('.remove', () => removeBlock(list, i));
   box.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (running) return;
-    target = block;
-    render();
+    select(mine[0]);
   });
   return box;
 }
 
 function renderPalette() {
-  paletteEl.replaceChildren(...LEVELS[levelIndex].blocks.map((type) => {
+  const level = LEVELS[levelIndex];
+  paletteEl.replaceChildren(...level.blocks.map((type) => {
     const el = makeBlock(type);
+    if (level.intro?.block === type) el.insertAdjacentHTML('beforeend', '<b class="new">NEW</b>');
     el.addEventListener('click', () => addBlock(type));
     return el;
   }));
@@ -323,20 +507,6 @@ function renderLevels() {
   }));
 }
 
-// Turn the program into the list of single steps the robot will take.
-function flatten(list, loop = null, steps = []) {
-  for (const block of list) {
-    if (block.type === 'repeat') {
-      for (let round = 1; round <= block.times; round++) {
-        flatten(block.body, { block, round }, steps);
-      }
-    } else {
-      steps.push({ block, loop });
-    }
-  }
-  return steps;
-}
-
 // ---------- Levels ----------
 
 function loadLevel(i) {
@@ -345,22 +515,37 @@ function loadLevel(i) {
   const level = LEVELS[i];
   document.getElementById('level-tag').textContent = `Level ${i + 1}`;
   document.getElementById('level-title').textContent = level.name;
+  document.getElementById('level-concept').textContent = level.concept;
   program = [];
-  target = null;
+  fnBody = [];
+  target = program;
   errorBlock = null;
   winEl.hidden = true;
+  setupCanvas();
   renderLevels();
   renderPalette();
   render();
   resetRobot();
+  if (level.intro && !completed.has(i)) showIntro(level.intro);
+}
+
+function showIntro(intro) {
+  const preview = makeBlock(intro.block);
+  preview.tabIndex = -1;
+  document.getElementById('intro-block').replaceChildren(preview);
+  document.getElementById('intro-title').textContent = intro.title;
+  document.getElementById('intro-text').textContent = intro.text;
+  introEl.hidden = false;
+  document.getElementById('intro-go').focus();
 }
 
 function resetRobot() {
+  stars = [];
   LEVELS[levelIndex].map.forEach((row, y) => [...row].forEach((c, x) => {
     if (c === 'R') robot = { x, y, dir: 0 };
-    if (c === '*') goal = { x, y };
+    if (c === '*') stars.push({ x, y, got: false, gotAt: 0 });
   }));
-  view = { x: robot.x, y: robot.y, angle: 0, hop: 0, bump: 0, shake: 0, dizzy: false, happy: false };
+  view = { x: robot.x, y: robot.y, angle: 0, hop: 0, bump: 0, shake: 0, dizzy: false, happy: false, scan: null };
   trail = [{ x: robot.x, y: robot.y }];
   confetti = [];
   setStatus(LEVELS[levelIndex].hint);
@@ -368,7 +553,18 @@ function resetRobot() {
 
 function isBlocked(x, y) {
   const map = LEVELS[levelIndex].map;
-  return y < 0 || y >= map.length || x < 0 || x >= map[0].length || map[y][x] === '#';
+  return y < 0 || y >= map.length || x < 0 || x >= map[0].length || '#~'.includes(map[y][x]);
+}
+
+// Is there a path next to the robot in this direction ('ahead', 'left' or 'right')?
+function sense(cond) {
+  const turn = { ahead: 0, left: 3, right: 1 }[cond];
+  const [dx, dy] = DIRS[(robot.dir + turn) % 4];
+  const x = robot.x + dx;
+  const y = robot.y + dy;
+  const yes = !isBlocked(x, y);
+  view.scan = { x, y, yes, at: performance.now() };
+  return yes;
 }
 
 function setStatus(text, kind = '') {
@@ -380,6 +576,46 @@ function setStatus(text, kind = '') {
 }
 
 // ---------- Running the program ----------
+
+// Walks the program one step at a time. Each step is { block, stack }, where
+// stack lists the containers it is inside. It's a generator, so "If" checks
+// happen just before they run, after the robot has finished moving.
+function* walk(list, stack) {
+  for (const block of list) {
+    if (block.type === 'repeat') {
+      for (let round = 1; round <= block.times; round++) {
+        yield* walk(block.body, [...stack, { block, label: `Round ${round} of ${block.times}` }]);
+      }
+    } else if (block.type === 'until') {
+      // Starting a round from the exact same spot as before means the loop
+      // will go round in circles forever, so stop it there.
+      const seen = new Set();
+      for (let round = 1; ; round++) {
+        const key = `${robot.x},${robot.y},${robot.dir},${stars.filter((s) => s.got).length}`;
+        if (seen.has(key)) {
+          yield { block, stack, stuck: true };
+          return;
+        }
+        seen.add(key);
+        let didSomething = false;
+        for (const step of walk(block.body, [...stack, { block, label: `Round ${round}` }])) {
+          didSomething = true;
+          yield step;
+        }
+        if (!didSomething) break;
+      }
+    } else if (block.type === 'if') {
+      const yes = sense(block.cond);
+      yield { block, stack, check: yes };
+      const branch = yes ? 'body' : 'other';
+      yield* walk(block[branch], [...stack, { block, label: yes ? 'Yes ✓' : 'No ✗', branch }]);
+    } else if (block.type === 'call') {
+      yield* walk(fnBody, [...stack, { block }]);
+    } else {
+      yield { block, stack };
+    }
+  }
+}
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -411,20 +647,39 @@ function setRunning(value) {
 }
 
 async function run() {
-  const steps = flatten(program);
-  if (steps.length === 0) {
+  if (program.length === 0) {
     setStatus('Tap some blocks first! 👆', 'oops');
     SOUNDS.oops();
     return;
   }
-  target = null;
+  target = program;
   errorBlock = null;
   resetRobot();
   setStatus('Go, robot, go! 🚀');
   setRunning(true);
 
-  for (const step of steps) {
+  let count = 0;
+  for (const step of walk(program, [])) {
+    if (++count > MAX_STEPS) {
+      setRunning(false);
+      setStatus('Phew! The robot is tired out. Does your loop ever reach the star?', 'oops');
+      SOUNDS.oops();
+      return;
+    }
     render(step);
+
+    if (step.stuck) {
+      setRunning(false);
+      setStatus('Uh oh, the robot is going round in circles! 🔄 This loop will never reach the star.', 'oops');
+      SOUNDS.oops();
+      return;
+    }
+    if ('check' in step) {
+      (step.check ? SOUNDS.yes : SOUNDS.no)();
+      await wait(CHECK_MS);
+      continue;
+    }
+
     const type = step.block.type;
     if (type === 'left' || type === 'right') {
       SOUNDS.turn();
@@ -458,6 +713,15 @@ async function run() {
         view.hop = Math.sin(t * Math.PI);
       });
       trail.push({ x: robot.x, y: robot.y });
+
+      const star = stars.find((s) => !s.got && s.x === robot.x && s.y === robot.y);
+      if (star) {
+        star.got = true;
+        star.gotAt = performance.now();
+        SOUNDS.collect();
+        spawnConfetti(star.x, star.y, 25);
+        if (stars.every((s) => s.got)) break;
+      }
     }
     await wait(PAUSE_MS);
   }
@@ -467,8 +731,11 @@ async function run() {
 }
 
 function finish() {
-  if (robot.x !== goal.x || robot.y !== goal.y) {
-    setStatus("So close! The robot didn't reach the star. Try again!", 'oops');
+  const left = stars.filter((s) => !s.got).length;
+  if (left > 0) {
+    setStatus(stars.length > 1
+      ? `So close! ${left} more star${left > 1 ? 's' : ''} to get. Try again!`
+      : "So close! The robot didn't reach the star. Try again!", 'oops');
     SOUNDS.oops();
     return;
   }
@@ -477,7 +744,7 @@ function finish() {
   save('robotcode.completed', [...completed]);
   renderLevels();
   SOUNDS.win();
-  spawnConfetti();
+  spawnConfetti(robot.x, robot.y, 90);
   setStatus('🎉 You got the star!', 'win');
   setTimeout(showWin, 900);
 }
@@ -487,7 +754,7 @@ function showWin() {
   document.getElementById('win-title').textContent = last ? 'You did it! 🏆' : 'Super coding!';
   document.getElementById('win-text').textContent = last
     ? 'You finished every level. You are a coding star!'
-    : `You solved "${LEVELS[levelIndex].name}" with ${countBlocks(program)} blocks.`;
+    : `You solved "${LEVELS[levelIndex].name}" with ${totalBlocks()} blocks.`;
   nextBtn.hidden = last;
   winEl.hidden = false;
   (last ? replayBtn : nextBtn).focus();
@@ -496,21 +763,18 @@ function showWin() {
 // ---------- Drawing the board ----------
 
 function setupCanvas() {
+  const map = LEVELS[levelIndex].map;
+  cell = SIZE / Math.max(map.length, map[0].length);
+  boardW = map[0].length * cell;
+  boardH = map.length * cell;
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = SIZE * dpr;
-  canvas.height = SIZE * dpr;
+  canvas.width = boardW * dpr;
+  canvas.height = boardH * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
-function layout() {
-  const map = LEVELS[levelIndex].map;
-  const cell = SIZE / Math.max(map.length, map[0].length);
-  return {
-    map,
-    cell,
-    ox: (SIZE - map[0].length * cell) / 2,
-    oy: (SIZE - map.length * cell) / 2,
-  };
+function center(x, y) {
+  return [(x + 0.5) * cell, (y + 0.5) * cell];
 }
 
 function circle(x, y, r, color) {
@@ -555,6 +819,21 @@ function drawFlower(cx, cy, s, h) {
   circle(fx, fy, s * 0.03, '#f0a500');
 }
 
+function drawWater(x, y, s, time) {
+  roundRect(x * s + 2, y * s + 2, s - 4, s - 4, s * 0.16, '#5bc0f0');
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+  ctx.lineWidth = s * 0.04;
+  ctx.lineCap = 'round';
+  for (const row of [0.38, 0.65]) {
+    const shift = Math.sin(time / 500 + x + y * 2 + row * 5) * s * 0.06;
+    ctx.beginPath();
+    ctx.moveTo(x * s + s * 0.25 + shift, y * s + s * row);
+    ctx.quadraticCurveTo(x * s + s * 0.38 + shift, y * s + s * (row - 0.07), x * s + s * 0.5 + shift, y * s + s * row);
+    ctx.quadraticCurveTo(x * s + s * 0.62 + shift, y * s + s * (row + 0.07), x * s + s * 0.75 + shift, y * s + s * row);
+    ctx.stroke();
+  }
+}
+
 function drawTree(cx, cy, s) {
   ellipse(cx, cy + s * 0.32, s * 0.3, s * 0.08, 'rgba(0, 0, 0, 0.15)');
   roundRect(cx - s * 0.06, cy + s * 0.05, s * 0.12, s * 0.27, 3, '#8b5a2b');
@@ -575,16 +854,23 @@ function starPath(r1, r2, points = 5) {
   ctx.closePath();
 }
 
-function drawStar(cx, cy, s, time) {
+function drawStar(star, s, time) {
+  // A collected star grows and fades away.
+  const since = star.got ? (time - star.gotAt) / 400 : 0;
+  if (since >= 1) return;
+  const [cx, cy] = center(star.x, star.y);
+  ctx.save();
+  ctx.globalAlpha = 1 - Math.max(0, since);
+
   const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, s * 0.5);
   glow.addColorStop(0, 'rgba(255, 230, 80, 0.6)');
   glow.addColorStop(1, 'rgba(255, 230, 80, 0)');
   circle(cx, cy, s * 0.5, glow);
 
-  ctx.save();
-  ctx.translate(cx, cy);
+  const pulse = 1 + 0.08 * Math.sin(time / 260) + Math.max(0, since) * 0.8;
+  ctx.translate(cx, cy - Math.max(0, since) * s * 0.4);
   ctx.rotate(Math.sin(time / 700) * 0.15);
-  ctx.scale(1 + 0.08 * Math.sin(time / 260), 1 + 0.08 * Math.sin(time / 260));
+  ctx.scale(pulse, pulse);
   starPath(s * 0.3, s * 0.13);
   ctx.fillStyle = '#ffd23f';
   ctx.fill();
@@ -593,6 +879,23 @@ function drawStar(cx, cy, s, time) {
   ctx.lineJoin = 'round';
   ctx.stroke();
   circle(-s * 0.07, -s * 0.07, s * 0.04, 'rgba(255, 255, 255, 0.85)');
+  ctx.restore();
+}
+
+// When an "If" looks at a square, flash it green (path) or red (blocked).
+function drawScan(s, time) {
+  const scan = view.scan;
+  if (!scan) return;
+  const t = (time - scan.at) / 700;
+  if (t >= 1) return;
+  ctx.save();
+  ctx.globalAlpha = 1 - t;
+  ctx.setLineDash([s * 0.12, s * 0.08]);
+  ctx.strokeStyle = scan.yes ? '#22b573' : '#ff5a5f';
+  ctx.lineWidth = s * 0.07;
+  ctx.beginPath();
+  ctx.roundRect(scan.x * s + s * 0.08, scan.y * s + s * 0.08, s * 0.84, s * 0.84, s * 0.16);
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -675,13 +978,13 @@ function drawRobot(cx, cy, s, time) {
   }
 }
 
-function spawnConfetti() {
-  const { cell, ox, oy } = layout();
+function spawnConfetti(x, y, amount) {
+  const [cx, cy] = center(x, y);
   const colors = ['#ff5a5f', '#ffd23f', '#4c8dff', '#22b573', '#b65cf0', '#ff9f1c'];
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < amount; i++) {
     confetti.push({
-      x: ox + (goal.x + 0.5) * cell,
-      y: oy + (goal.y + 0.5) * cell,
+      x: cx,
+      y: cy,
       vx: (Math.random() - 0.5) * 9,
       vy: -Math.random() * 9 - 3,
       r: Math.random() * Math.PI,
@@ -704,35 +1007,37 @@ function drawConfetti() {
     ctx.fillRect(-5, -3, 10, 6);
     ctx.restore();
   }
-  confetti = confetti.filter((p) => p.y < SIZE + 20);
+  confetti = confetti.filter((p) => p.y < boardH + 20);
 }
 
 function draw(time) {
-  const { map, cell, ox, oy } = layout();
-  ctx.clearRect(0, 0, SIZE, SIZE);
+  const map = LEVELS[levelIndex].map;
+  ctx.clearRect(0, 0, boardW, boardH);
 
-  // Grass tiles first, then everything that stands on them.
+  // Ground tiles first, then everything that stands on them.
   map.forEach((row, y) => [...row].forEach((c, x) => {
-    const tx = ox + x * cell;
-    const ty = oy + y * cell;
-    roundRect(tx + 2, ty + 2, cell - 4, cell - 4, cell * 0.16, (x + y) % 2 ? '#93d66f' : '#a3e07f');
+    if (c === '~') {
+      drawWater(x, y, cell, time);
+      return;
+    }
+    roundRect(x * cell + 2, y * cell + 2, cell - 4, cell - 4, cell * 0.16, (x + y) % 2 ? '#93d66f' : '#a3e07f');
     const h = cellHash(x, y);
-    if (c === '.' && h % 5 === 0) drawFlower(tx + cell / 2, ty + cell / 2, cell, h);
+    if (c === '.' && h % 5 === 0) drawFlower(...center(x, y), cell, h);
   }));
 
-  for (const p of trail) {
-    circle(ox + (p.x + 0.5) * cell, oy + (p.y + 0.5) * cell, cell * 0.07, 'rgba(255, 255, 255, 0.6)');
-  }
+  for (const p of trail) circle(...center(p.x, p.y), cell * 0.07, 'rgba(255, 255, 255, 0.6)');
 
   map.forEach((row, y) => [...row].forEach((c, x) => {
-    if (c === '#') drawTree(ox + (x + 0.5) * cell, oy + (y + 0.5) * cell, cell);
+    if (c === '#') drawTree(...center(x, y), cell);
   }));
 
-  drawStar(ox + (goal.x + 0.5) * cell, oy + (goal.y + 0.5) * cell, cell, time);
+  for (const star of stars) drawStar(star, cell, time);
+  drawScan(cell, time);
 
+  const [cx, cy] = center(view.x, view.y);
   const bx = Math.cos(view.angle) * view.bump * cell;
   const by = Math.sin(view.angle) * view.bump * cell;
-  drawRobot(ox + (view.x + 0.5) * cell + bx + view.shake, oy + (view.y + 0.5) * cell + by, cell, time);
+  drawRobot(cx + bx + view.shake, cy + by, cell, time);
 
   drawConfetti();
 }
@@ -751,18 +1056,16 @@ function updateSoundButton() {
 
 runBtn.addEventListener('click', run);
 clearBtn.addEventListener('click', () => {
-  if (program.length) SOUNDS.remove();
+  if (totalBlocks()) SOUNDS.remove();
   program = [];
-  target = null;
+  fnBody = [];
+  target = program;
   errorBlock = null;
   render();
   resetRobot();
 });
-programEl.addEventListener('click', () => {
-  if (running) return;
-  target = null;
-  render();
-});
+programEl.addEventListener('click', () => select(program));
+fnEl.addEventListener('click', () => select(fnBody));
 soundBtn.addEventListener('click', () => {
   muted = !muted;
   save('robotcode.muted', muted);
@@ -774,8 +1077,10 @@ replayBtn.addEventListener('click', () => {
   winEl.hidden = true;
   resetRobot();
 });
+document.getElementById('intro-go').addEventListener('click', () => {
+  introEl.hidden = true;
+});
 
-setupCanvas();
 updateSoundButton();
 loadLevel(Math.min(Math.max(-1, ...completed) + 1, LEVELS.length - 1));
 requestAnimationFrame(frame);
