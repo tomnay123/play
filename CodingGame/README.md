@@ -1,6 +1,6 @@
 # CodingGame
 
-A browser game that teaches coding to children aged 7–12. Players tap picture blocks to build a program, then press Go to steer a robot to the stars. Text-based coding is planned for later levels, once players have the basics.
+A browser game that teaches coding to children aged 7–12. Players tap picture blocks to build a program, then press Go to steer a robot around a space station to collect stars, dodging asteroids and open space. Later levels move on to typing real Python-style code.
 
 ## Levels and concepts
 

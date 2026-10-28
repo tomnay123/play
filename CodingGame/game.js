@@ -1,5 +1,5 @@
-// Map tiles: '#' tree and '~' water (both blocked), '.' grass, 'R' robot start
-// (facing right), '*' star, 'k' key, 'D' locked door. Collect every star to win.
+// Map tiles: '#' asteroid and '~' open space (both blocked), '.' floor, 'R' robot
+// start (facing right), '*' star, 'k' keycard, 'D' locked airlock. Collect every star to win.
 //
 // Level fields:
 // - `blocks`: the blocks unlocked on that level
@@ -105,7 +105,7 @@ const LEVELS = [
   },
   {
     id: 'pond',
-    name: 'Around the pond',
+    name: 'Around the black hole',
     concept: 'Loops inside loops',
     hint: 'Collect every star! Each side is the same: walk, then turn. Try a Repeat inside a Repeat.',
     blocks: [...BASIC, 'repeat'],
@@ -184,14 +184,14 @@ const LEVELS = [
   },
   {
     id: 'key-door',
-    name: 'Key and door',
-    concept: 'Keys and doors',
-    hint: 'The door is locked. Go and get the key first, then open the door!',
+    name: 'Keycard and airlock',
+    concept: 'Keycards and airlocks',
+    hint: 'The airlock is locked. Go and get the keycard first, then open the airlock!',
     blocks: [...BASIC, 'repeat'],
     intro: {
-      emoji: '🔑',
-      title: 'Keys and doors',
-      text: 'Doors are locked 🔒. Walk over a key to pick it up. The robot carries it, and walking into a door with a key opens it.',
+      emoji: '💳',
+      title: 'Keycards and airlocks',
+      text: 'Airlocks are locked 🔒. Walk over a keycard to pick it up. The robot carries it, and walking into an airlock with a keycard opens it.',
     },
     map: [
       '##k####',
@@ -203,7 +203,7 @@ const LEVELS = [
     id: 'hurdles',
     name: 'Hurdles',
     concept: 'Make your own block',
-    hint: 'Teach the robot to hop over a tree in "My block", then use it every time there\'s a tree.',
+    hint: 'Teach the robot to hop over a rock in "My block", then use it every time there\'s a rock.',
     blocks: [...BASIC, 'call'],
     maxBlocks: 18,
     intro: {
@@ -256,15 +256,15 @@ const LEVELS = [
   },
   {
     id: 'key-or-not',
-    name: 'Key or no key?',
+    name: 'Keycard or not?',
     concept: 'Remembering',
-    hint: 'Sometimes there\'s a key, sometimes not. If you have a key, use the door. Otherwise, take the long way round.',
+    hint: 'Sometimes there\'s a keycard, sometimes not. If you have one, use the airlock. Otherwise, take the long way round.',
     blocks: [...BASIC, 'repeat', 'if'],
     conditions: [...PATHS, 'key'],
     intro: {
       block: 'if',
-      title: 'Remember the key',
-      text: 'If can also check what the robot is carrying! Tap the question on an If block until it says "have a key?".',
+      title: 'Remember the keycard',
+      text: 'If can also check what the robot is carrying! Tap the question on an If block until it says "have a key?" (that means a keycard).',
     },
     maps: [
       [
@@ -422,7 +422,7 @@ LEVELS.push(
     name: 'Your own function',
     concept: 'def',
     mode: 'code',
-    hint: 'Finish "def hop():" so it hops over a tree, then type hop() each time there\'s a tree.',
+    hint: 'Finish "def hop():" so it hops over a rock, then type hop() each time there\'s a rock.',
     blocks: BASIC,
     maxLines: 20,
     snippets: [...COMMAND_SNIPPETS, 'def hop():', 'hop()'],
@@ -561,7 +561,8 @@ function save(key, value) {
 
 let audio;
 
-function tone(freq, dur, { type = 'sine', delay = 0, vol = 0.12 } = {}) {
+// `to` slides the pitch, for spacey whooshes.
+function tone(freq, dur, { type = 'sine', delay = 0, vol = 0.12, to = null } = {}) {
   if (muted) return;
   try {
     audio ??= new AudioContext();
@@ -574,6 +575,7 @@ function tone(freq, dur, { type = 'sine', delay = 0, vol = 0.12 } = {}) {
   const gain = audio.createGain();
   osc.type = type;
   osc.frequency.setValueAtTime(freq, t);
+  if (to) osc.frequency.exponentialRampToValueAtTime(to, t + dur);
   gain.gain.setValueAtTime(vol, t);
   gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
   osc.connect(gain).connect(audio.destination);
@@ -585,7 +587,7 @@ const SOUNDS = {
   add: () => tone(660, 0.12, { type: 'triangle' }),
   remove: () => tone(300, 0.12, { type: 'triangle' }),
   pick: () => tone(500, 0.06, { type: 'triangle', vol: 0.08 }),
-  move: () => tone(520, 0.08, { vol: 0.08 }),
+  move: () => tone(260, 0.16, { type: 'sawtooth', vol: 0.035, to: 620 }),
   turn: () => tone(400, 0.08, { vol: 0.08 }),
   yes: () => tone(880, 0.1, { vol: 0.08 }),
   no: () => tone(240, 0.12, { vol: 0.08 }),
@@ -594,8 +596,8 @@ const SOUNDS = {
     tone(1319, 0.2, { type: 'triangle', delay: 0.08 });
   },
   unlock: () => {
-    tone(600, 0.08, { type: 'square', vol: 0.06 });
-    tone(900, 0.15, { type: 'triangle', delay: 0.08 });
+    tone(900, 0.3, { type: 'sawtooth', vol: 0.04, to: 200 });
+    tone(1200, 0.12, { type: 'triangle', delay: 0.25 });
   },
   bonk: () => {
     tone(140, 0.25, { type: 'square', vol: 0.07 });
@@ -1526,7 +1528,7 @@ async function runOnce() {
         robot.keys--;
         door.open = true;
         SOUNDS.unlock();
-        setStatus('Click! The door is open 🔓');
+        setStatus('Whoosh! The airlock is open 🔓');
       }
       if (isBlocked(robot.x + dx, robot.y + dy)) {
         SOUNDS.bonk();
@@ -1538,8 +1540,8 @@ async function runOnce() {
         });
         errorBlock = step.block;
         setStatus(door
-          ? 'The door is locked! 🔒 The robot needs a key first.'
-          : 'Bonk! 🌳 Something is in the way. Try again!', 'oops');
+          ? 'The airlock is locked! 🔒 The robot needs a keycard first.'
+          : 'Bonk! 🪨 Something is in the way. Try again!', 'oops');
         return false;
       }
       SOUNDS.move();
@@ -1560,7 +1562,7 @@ async function runOnce() {
         key.gotAt = performance.now();
         robot.keys++;
         SOUNDS.collect();
-        setStatus('Got a key! 🔑');
+        setStatus('Got a keycard! 💳');
       }
       const star = stars.find((s) => !s.got && s.x === robot.x && s.y === robot.y);
       if (star) {
@@ -1595,7 +1597,7 @@ function finish() {
 
 function showWin() {
   const last = levelIndex === LEVELS.length - 1;
-  document.getElementById('win-title').textContent = last ? 'You did it! 🏆' : 'Super coding!';
+  document.getElementById('win-title').textContent = last ? 'All missions complete! 🏆' : 'Mission complete!';
   document.getElementById('win-text').textContent = last
     ? 'You finished the last level. You are a coding star!'
     : `You solved "${LEVELS[levelIndex].name}" with ${levelMode() === 'code'
@@ -1648,86 +1650,113 @@ function roundRect(x, y, w, h, r, fill, stroke, lineWidth) {
   }
 }
 
-// A stable pseudo-random number per cell, so flowers stay put.
+// A stable pseudo-random number per cell, so floor lights and rocks stay put.
 function cellHash(x, y) {
   return ((x * 73856093) ^ (y * 19349663)) >>> 0;
 }
 
-function drawFlower(cx, cy, s, h) {
-  const fx = cx + (h % 2 ? 0.24 : -0.24) * s;
-  const fy = cy + 0.24 * s;
-  const color = ['#ffffff', '#ffb3c7', '#ffe27a'][h % 3];
+// A metal floor plate with bolts in the corners.
+function drawFloor(x, y, s) {
+  const px = x * s;
+  const py = y * s;
+  const fill = ctx.createLinearGradient(px, py, px, py + s);
+  fill.addColorStop(0, (x + y) % 2 ? '#26306a' : '#2b3676');
+  fill.addColorStop(1, (x + y) % 2 ? '#1a2253' : '#1e275c');
+  roundRect(px + 2, py + 2, s - 4, s - 4, s * 0.12, fill, 'rgba(120, 160, 255, 0.28)', 1.5);
+  for (const [bx, by] of [[0.14, 0.14], [0.86, 0.14], [0.14, 0.86], [0.86, 0.86]]) {
+    circle(px + s * bx, py + s * by, s * 0.025, 'rgba(160, 190, 255, 0.35)');
+  }
+}
+
+// Some floor plates have a small blinking light.
+function drawFloorLight(x, y, s, h, time) {
+  const lx = (x + (h % 2 ? 0.72 : 0.28)) * s;
+  const ly = (y + 0.72) * s;
+  const color = ['45, 226, 255', '255, 79, 216', '110, 240, 168'][h % 3];
+  const glow = 0.45 + 0.4 * Math.sin(time / 500 + h);
+  circle(lx, ly, s * 0.07, `rgba(${color}, ${glow * 0.3})`);
+  circle(lx, ly, s * 0.03, `rgba(${color}, ${glow + 0.2})`);
+}
+
+// Open space: a hole in the station floor, full of twinkling stars.
+function drawVoid(x, y, s, time) {
+  const px = x * s;
+  const py = y * s;
+  const fill = ctx.createRadialGradient(px + s / 2, py + s / 2, 0, px + s / 2, py + s / 2, s * 0.7);
+  fill.addColorStop(0, '#1a0b3d');
+  fill.addColorStop(1, '#03030f');
+  roundRect(px + 2, py + 2, s - 4, s - 4, s * 0.12, fill, 'rgba(166, 107, 255, 0.55)', 2);
+  const h = cellHash(x, y);
   for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2;
-    circle(fx + Math.cos(a) * s * 0.04, fy + Math.sin(a) * s * 0.04, s * 0.035, color);
-  }
-  circle(fx, fy, s * 0.03, '#f0a500');
-}
-
-function drawWater(x, y, s, time) {
-  roundRect(x * s + 2, y * s + 2, s - 4, s - 4, s * 0.16, '#5bc0f0');
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-  ctx.lineWidth = s * 0.04;
-  ctx.lineCap = 'round';
-  for (const row of [0.38, 0.65]) {
-    const shift = Math.sin(time / 500 + x + y * 2 + row * 5) * s * 0.06;
-    ctx.beginPath();
-    ctx.moveTo(x * s + s * 0.25 + shift, y * s + s * row);
-    ctx.quadraticCurveTo(x * s + s * 0.38 + shift, y * s + s * (row - 0.07), x * s + s * 0.5 + shift, y * s + s * row);
-    ctx.quadraticCurveTo(x * s + s * 0.62 + shift, y * s + s * (row + 0.07), x * s + s * 0.75 + shift, y * s + s * row);
-    ctx.stroke();
+    const sx = px + s * (0.15 + (((h >> (i * 3)) & 7) / 7) * 0.7);
+    const sy = py + s * (0.15 + (((h >> (i * 3 + 9)) & 7) / 7) * 0.7);
+    const twinkle = 0.4 + 0.6 * Math.abs(Math.sin(time / 600 + i * 1.7 + h));
+    circle(sx, sy, s * 0.018, `rgba(255, 255, 255, ${twinkle})`);
   }
 }
 
-function drawTree(cx, cy, s) {
-  ellipse(cx, cy + s * 0.32, s * 0.3, s * 0.08, 'rgba(0, 0, 0, 0.15)');
-  roundRect(cx - s * 0.06, cy + s * 0.05, s * 0.12, s * 0.27, 3, '#8b5a2b');
-  circle(cx - s * 0.16, cy - s * 0.02, s * 0.2, '#2f8f46');
-  circle(cx + s * 0.16, cy - s * 0.02, s * 0.2, '#2f8f46');
-  circle(cx, cy - s * 0.18, s * 0.24, '#3aa352');
-  circle(cx - s * 0.07, cy - s * 0.24, s * 0.1, '#5cc46a');
-  circle(cx - s * 0.2, cy - s * 0.05, s * 0.07, '#4fb85c');
+// An asteroid: a lumpy grey rock with craters.
+function drawRock(cx, cy, s, h) {
+  ellipse(cx, cy + s * 0.3, s * 0.32, s * 0.08, 'rgba(0, 0, 0, 0.35)');
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate((h % 628) / 100);
+  ctx.beginPath();
+  const bumps = 9;
+  for (let i = 0; i <= bumps; i++) {
+    const a = (i / bumps) * Math.PI * 2;
+    const r = s * (0.32 + (((h >> i) & 3) / 3) * 0.07);
+    ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  ctx.closePath();
+  const fill = ctx.createRadialGradient(-s * 0.12, -s * 0.12, s * 0.05, 0, 0, s * 0.4);
+  fill.addColorStop(0, '#9aa3c4');
+  fill.addColorStop(1, '#4a5275');
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.strokeStyle = '#2e3452';
+  ctx.lineWidth = s * 0.025;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+  circle(s * 0.1, s * 0.06, s * 0.08, 'rgba(46, 52, 82, 0.55)');
+  circle(-s * 0.12, s * 0.12, s * 0.05, 'rgba(46, 52, 82, 0.5)');
+  circle(-s * 0.05, -s * 0.15, s * 0.04, 'rgba(46, 52, 82, 0.45)');
+  ctx.restore();
 }
 
-function drawDoor(door, s) {
+// An airlock door. Locked ones show a red light; open ones slide apart.
+function drawDoor(door, s, time) {
   const x = door.x * s;
   const y = door.y * s;
-  roundRect(x + s * 0.12, y + s * 0.06, s * 0.76, s * 0.86, s * 0.1, '#6b4423');
+  roundRect(x + s * 0.08, y + s * 0.06, s * 0.84, s * 0.88, s * 0.1, '#3a4270', '#7c8bd6', s * 0.025);
   if (door.open) {
-    roundRect(x + s * 0.18, y + s * 0.12, s * 0.64, s * 0.78, s * 0.08, '#3b2a1a');
-    roundRect(x + s * 0.08, y + s * 0.1, s * 0.14, s * 0.82, s * 0.04, '#b5793b', '#8a5a2b', s * 0.02);
+    roundRect(x + s * 0.16, y + s * 0.14, s * 0.68, s * 0.72, s * 0.06, '#050818');
+    roundRect(x + s * 0.1, y + s * 0.12, s * 0.1, s * 0.76, s * 0.03, '#8d9ad8');
+    roundRect(x + s * 0.8, y + s * 0.12, s * 0.1, s * 0.76, s * 0.03, '#8d9ad8');
+    circle(x + s * 0.5, y + s * 0.2, s * 0.05, '#6ef0a8');
     return;
   }
-  roundRect(x + s * 0.18, y + s * 0.12, s * 0.64, s * 0.78, s * 0.08, '#b5793b', '#8a5a2b', s * 0.02);
-  ctx.strokeStyle = '#8a5a2b';
-  ctx.lineWidth = s * 0.02;
-  ctx.beginPath();
-  for (const px of [0.39, 0.61]) {
-    ctx.moveTo(x + s * px, y + s * 0.14);
-    ctx.lineTo(x + s * px, y + s * 0.88);
+  roundRect(x + s * 0.16, y + s * 0.14, s * 0.33, s * 0.72, s * 0.05, '#8d9ad8', '#5b67a8', s * 0.015);
+  roundRect(x + s * 0.51, y + s * 0.14, s * 0.33, s * 0.72, s * 0.05, '#8d9ad8', '#5b67a8', s * 0.015);
+  ctx.fillStyle = 'rgba(255, 210, 63, 0.85)';
+  for (let i = 0; i < 3; i++) {
+    ctx.fillRect(x + s * 0.18, y + s * (0.3 + i * 0.16), s * 0.64, s * 0.04);
   }
-  ctx.stroke();
-  roundRect(x + s * 0.4, y + s * 0.44, s * 0.2, s * 0.17, s * 0.04, '#ffd23f', '#c98a00', s * 0.02);
-  circle(x + s * 0.5, y + s * 0.51, s * 0.025, '#5a3b00');
+  const blink = 0.55 + 0.45 * Math.sin(time / 250);
+  circle(x + s * 0.5, y + s * 0.2, s * 0.08, `rgba(255, 77, 109, ${blink * 0.35})`);
+  circle(x + s * 0.5, y + s * 0.2, s * 0.045, `rgba(255, 77, 109, ${blink})`);
 }
 
+// A keycard that opens airlocks.
 function drawKey(cx, cy, s, scale = 1) {
   ctx.save();
   ctx.translate(cx, cy);
-  ctx.rotate(-0.5);
+  ctx.rotate(-0.25);
   ctx.scale(scale, scale);
-  const line = s * 0.025;
-  roundRect(-s * 0.06, -s * 0.035, s * 0.3, s * 0.07, s * 0.02, '#ffd23f', '#c98a00', line);
-  roundRect(s * 0.13, s * 0.02, s * 0.05, s * 0.08, s * 0.01, '#ffd23f', '#c98a00', line);
-  roundRect(s * 0.2, s * 0.02, s * 0.04, s * 0.06, s * 0.01, '#ffd23f', '#c98a00', line);
-  ctx.beginPath();
-  ctx.arc(-s * 0.13, 0, s * 0.1, 0, Math.PI * 2);
-  ctx.fillStyle = '#ffd23f';
-  ctx.fill();
-  ctx.strokeStyle = '#c98a00';
-  ctx.lineWidth = line;
-  ctx.stroke();
-  circle(-s * 0.13, 0, s * 0.035, '#c98a00');
+  roundRect(-s * 0.2, -s * 0.13, s * 0.4, s * 0.26, s * 0.05, '#2de2ff', '#e6fbff', s * 0.02);
+  roundRect(-s * 0.15, -s * 0.06, s * 0.1, s * 0.08, s * 0.015, '#ffd23f');
+  roundRect(s * 0.0, -s * 0.07, s * 0.15, s * 0.03, s * 0.01, 'rgba(10, 30, 60, 0.6)');
+  roundRect(s * 0.0, s * 0.0, s * 0.11, s * 0.03, s * 0.01, 'rgba(10, 30, 60, 0.6)');
   ctx.restore();
 }
 
@@ -1738,8 +1767,8 @@ function drawPickup(item, s, time) {
   ctx.save();
   ctx.globalAlpha = 1 - Math.max(0, since);
   const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, s * 0.45);
-  glow.addColorStop(0, 'rgba(255, 240, 150, 0.7)');
-  glow.addColorStop(1, 'rgba(255, 240, 150, 0)');
+  glow.addColorStop(0, 'rgba(45, 226, 255, 0.55)');
+  glow.addColorStop(1, 'rgba(45, 226, 255, 0)');
   circle(cx, cy, s * 0.45, glow);
   drawKey(cx, cy + Math.sin(time / 300) * s * 0.04 - Math.max(0, since) * s * 0.4, s, 1 + Math.max(0, since) * 0.5);
   ctx.restore();
@@ -1805,9 +1834,13 @@ function drawRobot(cx, cy, s, time) {
   const bob = running ? 0 : Math.sin(time / 320) * s * 0.012;
   const y = cy - lift + bob;
 
-  ellipse(cx, cy + s * 0.33, s * 0.26 * (1 - view.hop * 0.35), s * 0.07, 'rgba(0, 0, 0, 0.18)');
+  // A soft glow on the floor under the robot.
+  const shadow = ctx.createRadialGradient(cx, cy + s * 0.33, 0, cx, cy + s * 0.33, s * 0.3);
+  shadow.addColorStop(0, 'rgba(45, 226, 255, 0.45)');
+  shadow.addColorStop(1, 'rgba(45, 226, 255, 0)');
+  ellipse(cx, cy + s * 0.33, s * 0.3 * (1 - view.hop * 0.3), s * 0.09, shadow);
 
-  // Arrow on the ground showing which way the robot faces.
+  // Arrow on the floor showing which way the robot faces.
   ctx.save();
   ctx.translate(cx, cy + s * 0.05);
   ctx.rotate(view.angle);
@@ -1816,45 +1849,75 @@ function drawRobot(cx, cy, s, time) {
   ctx.lineTo(s * 0.35, -s * 0.1);
   ctx.lineTo(s * 0.35, s * 0.1);
   ctx.closePath();
-  ctx.fillStyle = '#ff5a5f';
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth = s * 0.025;
-  ctx.lineJoin = 'round';
-  ctx.stroke();
+  ctx.fillStyle = '#ff4fd8';
+  ctx.shadowColor = '#ff4fd8';
+  ctx.shadowBlur = s * 0.2;
   ctx.fill();
   ctx.restore();
 
+  // Rocket flames while hopping between squares.
+  if (view.hop > 0.05) {
+    for (const side of [-1, 1]) {
+      const fx = cx + side * s * 0.1;
+      const fy = y + s * 0.33;
+      const len = s * (0.12 + view.hop * 0.18) * (0.85 + 0.15 * Math.sin(time / 30 + side));
+      const flame = ctx.createLinearGradient(fx, fy, fx, fy + len);
+      flame.addColorStop(0, 'rgba(255, 255, 220, 0.95)');
+      flame.addColorStop(0.4, 'rgba(255, 170, 60, 0.9)');
+      flame.addColorStop(1, 'rgba(255, 79, 109, 0)');
+      ctx.fillStyle = flame;
+      ctx.beginPath();
+      ctx.moveTo(fx - s * 0.05, fy);
+      ctx.quadraticCurveTo(fx, fy + len * 1.3, fx + s * 0.05, fy);
+      ctx.fill();
+    }
+  }
+
   // Feet and body.
-  ellipse(cx - s * 0.11, y + s * 0.3, s * 0.07, s * 0.04, '#3a4a66');
-  ellipse(cx + s * 0.11, y + s * 0.3, s * 0.07, s * 0.04, '#3a4a66');
-  roundRect(cx - s * 0.2, y + s * 0.07, s * 0.4, s * 0.22, s * 0.07, '#4c8dff', '#2f5fb8', s * 0.02);
-  circle(cx, y + s * 0.18, s * 0.04, view.happy ? '#ffd23f' : '#9fd0ff');
+  ellipse(cx - s * 0.11, y + s * 0.3, s * 0.07, s * 0.04, '#3a4470');
+  ellipse(cx + s * 0.11, y + s * 0.3, s * 0.07, s * 0.04, '#3a4470');
+  roundRect(cx - s * 0.2, y + s * 0.07, s * 0.4, s * 0.22, s * 0.07, '#e9efff', '#6b7bd1', s * 0.02);
+  roundRect(cx - s * 0.12, y + s * 0.12, s * 0.24, s * 0.08, s * 0.03, '#10163d');
+  for (let i = 0; i < 3; i++) {
+    const on = Math.floor(time / 300 + i) % 3 === 0 || view.happy;
+    circle(cx + (i - 1) * s * 0.07, y + s * 0.16, s * 0.022, on ? '#6ef0a8' : 'rgba(110, 240, 168, 0.3)');
+  }
 
   // Antenna with a blinking light.
-  ctx.strokeStyle = '#5b6b88';
+  ctx.strokeStyle = '#8d9ad8';
   ctx.lineWidth = s * 0.025;
   ctx.beginPath();
   ctx.moveTo(cx, y - s * 0.3);
   ctx.lineTo(cx, y - s * 0.4);
   ctx.stroke();
   const blink = 0.6 + 0.4 * Math.sin(time / 200);
-  circle(cx, y - s * 0.42, s * 0.05, `rgba(255, 90, 95, ${blink})`);
+  circle(cx, y - s * 0.42, s * 0.09, `rgba(255, 79, 216, ${blink * 0.3})`);
+  circle(cx, y - s * 0.42, s * 0.05, `rgba(255, 79, 216, ${blink})`);
 
-  // Head and face screen.
-  roundRect(cx - s * 0.27, y - s * 0.32, s * 0.54, s * 0.41, s * 0.12, '#eef3fb', '#5b6b88', s * 0.025);
-  roundRect(cx - s * 0.2, y - s * 0.26, s * 0.4, s * 0.28, s * 0.08, '#263247');
-  circle(cx - s * 0.14, y - s * 0.04, s * 0.025, 'rgba(255, 120, 160, 0.7)');
-  circle(cx + s * 0.14, y - s * 0.04, s * 0.025, 'rgba(255, 120, 160, 0.7)');
+  // Head with a glowing visor.
+  roundRect(cx - s * 0.27, y - s * 0.32, s * 0.54, s * 0.41, s * 0.14, '#e9efff', '#6b7bd1', s * 0.025);
+  const visor = ctx.createLinearGradient(cx, y - s * 0.26, cx, y + s * 0.02);
+  visor.addColorStop(0, '#1b2a6b');
+  visor.addColorStop(1, '#070b1f');
+  roundRect(cx - s * 0.2, y - s * 0.26, s * 0.4, s * 0.28, s * 0.09, visor, 'rgba(45, 226, 255, 0.7)', s * 0.015);
+  ctx.beginPath();
+  ctx.ellipse(cx - s * 0.1, y - s * 0.21, s * 0.07, s * 0.025, -0.3, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+  ctx.fill();
 
   // Eyes look the way the robot faces.
   const ex = Math.cos(view.angle) * s * 0.035;
   const ey = Math.sin(view.angle) * s * 0.025;
-  ctx.strokeStyle = view.dizzy ? '#ff7b7b' : '#5ff3ff';
+  const eyeColor = view.dizzy ? '#ff4d6d' : '#2de2ff';
+  ctx.strokeStyle = eyeColor;
   ctx.lineWidth = s * 0.03;
   ctx.lineCap = 'round';
+  ctx.save();
+  ctx.shadowColor = eyeColor;
+  ctx.shadowBlur = s * 0.15;
   for (const side of [-1, 1]) {
     const x = cx + side * s * 0.085;
-    const ey0 = y - s * 0.13;
+    const ey0 = y - s * 0.12;
     if (view.dizzy) {
       const r = s * 0.04;
       ctx.beginPath();
@@ -1873,18 +1936,18 @@ function drawRobot(cx, cy, s, time) {
       ctx.lineTo(x + s * 0.045, ey0);
       ctx.stroke();
     } else {
-      circle(x + ex, ey0 + ey, s * 0.05, '#5ff3ff');
-      circle(x + ex + s * 0.015, ey0 + ey - s * 0.015, s * 0.015, '#ffffff');
+      roundRect(x + ex - s * 0.04, ey0 + ey - s * 0.05, s * 0.08, s * 0.1, s * 0.03, eyeColor);
     }
   }
+  ctx.restore();
 
-  // A key the robot is carrying floats beside it.
-  if (robot.keys > 0) drawKey(cx + s * 0.32, y - s * 0.12, s, 0.6);
+  // A keycard the robot is carrying floats beside it.
+  if (robot.keys > 0) drawKey(cx + s * 0.34, y - s * 0.1, s, 0.6);
 }
 
 function spawnConfetti(x, y, amount) {
   const [cx, cy] = center(x, y);
-  const colors = ['#ff5a5f', '#ffd23f', '#4c8dff', '#22b573', '#b65cf0', '#ff9f1c'];
+  const colors = ['#2de2ff', '#ff4fd8', '#ffd23f', '#6ef0a8', '#a66bff', '#ffffff'];
   for (let i = 0; i < amount; i++) {
     confetti.push({
       x: cx,
@@ -1899,6 +1962,8 @@ function spawnConfetti(x, y, amount) {
 }
 
 function drawConfetti() {
+  ctx.save();
+  ctx.shadowBlur = 8;
   for (const p of confetti) {
     p.vy += 0.25;
     p.x += p.vx;
@@ -1907,34 +1972,41 @@ function drawConfetti() {
     ctx.save();
     ctx.translate(p.x, p.y);
     ctx.rotate(p.r);
+    ctx.shadowColor = p.color;
     ctx.fillStyle = p.color;
-    ctx.fillRect(-5, -3, 10, 6);
+    ctx.fillRect(-5, -2, 10, 4);
     ctx.restore();
   }
+  ctx.restore();
   confetti = confetti.filter((p) => p.y < boardH + 20);
 }
 
 function draw(time) {
   ctx.clearRect(0, 0, boardW, boardH);
 
-  // Ground tiles first, then everything that stands on them.
+  // Floor first, then everything that stands on it.
   currentMap.forEach((row, y) => [...row].forEach((c, x) => {
     if (c === '~') {
-      drawWater(x, y, cell, time);
+      drawVoid(x, y, cell, time);
       return;
     }
-    roundRect(x * cell + 2, y * cell + 2, cell - 4, cell - 4, cell * 0.16, (x + y) % 2 ? '#93d66f' : '#a3e07f');
+    drawFloor(x, y, cell);
     const h = cellHash(x, y);
-    if (c === '.' && h % 5 === 0) drawFlower(...center(x, y), cell, h);
+    if (c === '.' && h % 5 === 0) drawFloorLight(x, y, cell, h, time);
   }));
 
-  for (const p of trail) circle(...center(p.x, p.y), cell * 0.07, 'rgba(255, 255, 255, 0.6)');
+  // Glowing footprints where the robot has been.
+  ctx.save();
+  ctx.shadowColor = '#2de2ff';
+  ctx.shadowBlur = cell * 0.2;
+  for (const p of trail) circle(...center(p.x, p.y), cell * 0.06, 'rgba(45, 226, 255, 0.8)');
+  ctx.restore();
 
   currentMap.forEach((row, y) => [...row].forEach((c, x) => {
-    if (c === '#') drawTree(...center(x, y), cell);
+    if (c === '#') drawRock(...center(x, y), cell, cellHash(x, y));
   }));
 
-  for (const door of doors) drawDoor(door, cell);
+  for (const door of doors) drawDoor(door, cell, time);
   for (const key of keys) drawPickup(key, cell, time);
   for (const star of stars) drawStar(star, cell, time);
   drawScan(cell, time);
