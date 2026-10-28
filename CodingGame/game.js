@@ -483,7 +483,12 @@ const MAX_TIMES = 9;
 const SIZE = 480; // longest board side in canvas pixels, before device scaling
 
 const canvas = document.getElementById('board');
-const ctx = canvas.getContext('2d');
+const boardCtx = canvas.getContext('2d');
+// Floor, asteroids and open space never change during a level, so they're drawn
+// once onto this offscreen canvas and copied onto the board each frame.
+const staticCanvas = document.createElement('canvas');
+const staticCtx = staticCanvas.getContext('2d');
+let ctx = boardCtx; // the drawing helpers draw onto whichever canvas this is
 const levelsEl = document.getElementById('levels');
 const paletteEl = document.getElementById('palette');
 const programEl = document.getElementById('program');
@@ -1614,10 +1619,27 @@ function setupCanvas() {
   cell = SIZE / Math.max(currentMap.length, currentMap[0].length);
   boardW = currentMap[0].length * cell;
   boardH = currentMap.length * cell;
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = boardW * dpr;
-  canvas.height = boardH * dpr;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // Very sharp phone screens don't need more than double resolution.
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  for (const [el, c] of [[canvas, boardCtx], [staticCanvas, staticCtx]]) {
+    el.width = boardW * dpr;
+    el.height = boardH * dpr;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  drawStaticLayer();
+}
+
+function drawStaticLayer() {
+  ctx = staticCtx;
+  ctx.clearRect(0, 0, boardW, boardH);
+  currentMap.forEach((row, y) => [...row].forEach((c, x) => {
+    if (c === '~') drawVoid(x, y, cell);
+    else drawFloor(x, y, cell);
+  }));
+  currentMap.forEach((row, y) => [...row].forEach((c, x) => {
+    if (c === '#') drawRock(...center(x, y), cell, cellHash(x, y));
+  }));
+  ctx = boardCtx;
 }
 
 function center(x, y) {
@@ -1679,13 +1701,18 @@ function drawFloorLight(x, y, s, h, time) {
 }
 
 // Open space: a hole in the station floor, full of twinkling stars.
-function drawVoid(x, y, s, time) {
+function drawVoid(x, y, s) {
   const px = x * s;
   const py = y * s;
   const fill = ctx.createRadialGradient(px + s / 2, py + s / 2, 0, px + s / 2, py + s / 2, s * 0.7);
   fill.addColorStop(0, '#1a0b3d');
   fill.addColorStop(1, '#03030f');
   roundRect(px + 2, py + 2, s - 4, s - 4, s * 0.12, fill, 'rgba(166, 107, 255, 0.55)', 2);
+}
+
+function drawVoidStars(x, y, s, time) {
+  const px = x * s;
+  const py = y * s;
   const h = cellHash(x, y);
   for (let i = 0; i < 5; i++) {
     const sx = px + s * (0.15 + (((h >> (i * 3)) & 7) / 7) * 0.7);
@@ -1849,9 +1876,11 @@ function drawRobot(cx, cy, s, time) {
   ctx.lineTo(s * 0.35, -s * 0.1);
   ctx.lineTo(s * 0.35, s * 0.1);
   ctx.closePath();
+  ctx.strokeStyle = 'rgba(255, 79, 216, 0.35)';
+  ctx.lineWidth = s * 0.08;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
   ctx.fillStyle = '#ff4fd8';
-  ctx.shadowColor = '#ff4fd8';
-  ctx.shadowBlur = s * 0.2;
   ctx.fill();
   ctx.restore();
 
@@ -1912,9 +1941,6 @@ function drawRobot(cx, cy, s, time) {
   ctx.strokeStyle = eyeColor;
   ctx.lineWidth = s * 0.03;
   ctx.lineCap = 'round';
-  ctx.save();
-  ctx.shadowColor = eyeColor;
-  ctx.shadowBlur = s * 0.15;
   for (const side of [-1, 1]) {
     const x = cx + side * s * 0.085;
     const ey0 = y - s * 0.12;
@@ -1936,10 +1962,10 @@ function drawRobot(cx, cy, s, time) {
       ctx.lineTo(x + s * 0.045, ey0);
       ctx.stroke();
     } else {
+      roundRect(x + ex - s * 0.065, ey0 + ey - s * 0.075, s * 0.13, s * 0.15, s * 0.05, 'rgba(45, 226, 255, 0.3)');
       roundRect(x + ex - s * 0.04, ey0 + ey - s * 0.05, s * 0.08, s * 0.1, s * 0.03, eyeColor);
     }
   }
-  ctx.restore();
 
   // A keycard the robot is carrying floats beside it.
   if (robot.keys > 0) drawKey(cx + s * 0.34, y - s * 0.1, s, 0.6);
@@ -1962,8 +1988,6 @@ function spawnConfetti(x, y, amount) {
 }
 
 function drawConfetti() {
-  ctx.save();
-  ctx.shadowBlur = 8;
   for (const p of confetti) {
     p.vy += 0.25;
     p.x += p.vx;
@@ -1972,39 +1996,29 @@ function drawConfetti() {
     ctx.save();
     ctx.translate(p.x, p.y);
     ctx.rotate(p.r);
-    ctx.shadowColor = p.color;
     ctx.fillStyle = p.color;
     ctx.fillRect(-5, -2, 10, 4);
     ctx.restore();
   }
-  ctx.restore();
   confetti = confetti.filter((p) => p.y < boardH + 20);
 }
 
 function draw(time) {
   ctx.clearRect(0, 0, boardW, boardH);
+  ctx.drawImage(staticCanvas, 0, 0, boardW, boardH);
 
-  // Floor first, then everything that stands on it.
+  // Blinking floor lights and twinkling stars in open space.
   currentMap.forEach((row, y) => [...row].forEach((c, x) => {
-    if (c === '~') {
-      drawVoid(x, y, cell, time);
-      return;
-    }
-    drawFloor(x, y, cell);
+    if (c === '~') drawVoidStars(x, y, cell, time);
     const h = cellHash(x, y);
     if (c === '.' && h % 5 === 0) drawFloorLight(x, y, cell, h, time);
   }));
 
   // Glowing footprints where the robot has been.
-  ctx.save();
-  ctx.shadowColor = '#2de2ff';
-  ctx.shadowBlur = cell * 0.2;
-  for (const p of trail) circle(...center(p.x, p.y), cell * 0.06, 'rgba(45, 226, 255, 0.8)');
-  ctx.restore();
-
-  currentMap.forEach((row, y) => [...row].forEach((c, x) => {
-    if (c === '#') drawRock(...center(x, y), cell, cellHash(x, y));
-  }));
+  for (const p of trail) {
+    circle(...center(p.x, p.y), cell * 0.12, 'rgba(45, 226, 255, 0.18)');
+    circle(...center(p.x, p.y), cell * 0.06, 'rgba(45, 226, 255, 0.85)');
+  }
 
   for (const door of doors) drawDoor(door, cell, time);
   for (const key of keys) drawPickup(key, cell, time);
@@ -2019,8 +2033,11 @@ function draw(time) {
   drawConfetti();
 }
 
+let boardOnScreen = true;
+new IntersectionObserver(([entry]) => { boardOnScreen = entry.isIntersecting; }).observe(canvas);
+
 function frame(time) {
-  draw(time);
+  if (boardOnScreen) draw(time);
   requestAnimationFrame(frame);
 }
 
