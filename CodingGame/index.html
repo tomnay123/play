@@ -31,10 +31,12 @@
           <span id="level-tag" class="level-tag"></span>
           <h1 id="level-title"></h1>
           <span id="level-concept" class="concept-tag"></span>
+          <button id="skip" class="skip-btn">Skip level ➜</button>
         </div>
         <div class="board-wrap">
           <canvas id="board"></canvas>
         </div>
+        <div id="tests" class="tests" hidden></div>
         <div id="bubble" class="bubble">
           <div class="avatar">🤖</div>
           <div id="status" class="text"></div>
@@ -42,16 +44,36 @@
       </section>
 
       <section class="card workshop">
-        <h2 class="step"><span class="num">1</span>Pick your blocks</h2>
-        <div id="palette" class="palette"></div>
+        <div id="blocks-ui">
+          <h2 class="step"><span class="num">1</span>Pick your blocks</h2>
+          <div id="palette" class="palette"></div>
 
-        <h2 class="step"><span class="num">2</span>Your program <span id="count" class="count"></span></h2>
-        <div id="program" class="program"></div>
-        <p class="hint">Tap a block in your program to take it out.</p>
+          <h2 class="step"><span class="num">2</span>Your program <span id="count" class="count"></span></h2>
+          <div id="program" class="program"></div>
+          <p class="hint">Tap a block in your program to pick it: new blocks go after it, and ✖ takes it out.</p>
 
-        <div id="fn-wrap" hidden>
-          <h2 class="step"><span class="num fn-num">✨</span>My block <small>a new move you make yourself</small></h2>
-          <div id="fn" class="program fn"></div>
+          <div id="fn-wrap" hidden>
+            <h2 class="step"><span class="num fn-num">✨</span>My block <small>a new move you make yourself</small></h2>
+            <div id="fn" class="program fn"></div>
+          </div>
+
+          <div id="code-view-wrap" hidden>
+            <h2 class="step"><span class="num code-num">🐍</span>Your program as code <small>this is Python!</small></h2>
+            <pre id="code-view" class="code-view"></pre>
+          </div>
+        </div>
+
+        <div id="code-ui" hidden>
+          <h2 class="step"><span class="num code-num">🐍</span>Type your code <span id="line-count" class="count"></span></h2>
+          <div id="snippets" class="snippets"></div>
+          <div class="editor">
+            <div id="gutter" class="gutter" aria-hidden="true"></div>
+            <div class="editor-stack">
+              <pre id="code-layer" class="code-layer" aria-hidden="true"></pre>
+              <textarea id="code" class="code-input" spellcheck="false" wrap="off" autocapitalize="off" autocomplete="off" aria-label="Your code"></textarea>
+            </div>
+          </div>
+          <p class="hint">Tap a command above to add it, or type it yourself. Lines under a <code>:</code> are pushed in with 4 spaces.</p>
         </div>
 
         <div class="controls">
