@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Robot Code</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="sky" aria-hidden="true">
+    <div class="cloud c1"></div>
+    <div class="cloud c2"></div>
+    <div class="cloud c3"></div>
+    <div class="hill h1"></div>
+    <div class="hill h2"></div>
+  </div>
+
+  <div class="app">
+    <header class="topbar">
+      <div class="logo"><span class="logo-badge">🤖</span>Robot Code</div>
+      <nav id="levels" class="levels" aria-label="Levels"></nav>
+      <button id="sound" class="icon-btn" aria-label="Sound on or off">🔊</button>
+    </header>
+
+    <main class="game">
+      <section class="card stage">
+        <div class="stage-head">
+          <span id="level-tag" class="level-tag"></span>
+          <h1 id="level-title"></h1>
+        </div>
+        <div class="board-wrap">
+          <canvas id="board"></canvas>
+        </div>
+        <div id="bubble" class="bubble">
+          <div class="avatar">🤖</div>
+          <div id="status" class="text"></div>
+        </div>
+      </section>
+
+      <section class="card workshop">
+        <h2 class="step"><span class="num">1</span>Pick your blocks</h2>
+        <div id="palette" class="palette"></div>
+
+        <h2 class="step"><span class="num">2</span>Your program <span id="count" class="count"></span></h2>
+        <div id="program" class="program"></div>
+        <p class="hint">Tap a block in your program to take it out.</p>
+
+        <div class="controls">
+          <button id="run" class="btn btn-go">▶ Go!</button>
+          <button id="clear" class="btn btn-clear">Clear</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="win" class="overlay" hidden>
+    <div class="win-card" role="dialog" aria-modal="true" aria-labelledby="win-title">
+      <svg class="win-star" viewBox="0 0 100 100" aria-hidden="true">
+        <polygon points="50,6 62,36 95,38 69,59 78,92 50,74 22,92 31,59 5,38 38,36" />
+      </svg>
+      <h2 id="win-title"></h2>
+      <p id="win-text"></p>
+      <div class="win-buttons">
+        <button id="next" class="btn btn-go">Next level ➜</button>
+        <button id="replay" class="btn btn-clear">Play again</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
